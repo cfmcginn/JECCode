@@ -106,8 +106,6 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   const Int_t nDir = nDirTemp;
   TH1F* th1_p[nTH1];
   
-  Float_t th1XMin = 30;
-
   TCanvas* th1Canv_p[nDir];
 
   for(Int_t iter = 0; iter < nDir; iter++){
@@ -128,11 +126,14 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     dirMin[iter] = 100;
   }
 
+  Float_t th1XMin = 30;
 
   for(Int_t iter = 0; iter < nTH1; iter++){
     std::string th1Name = th1Names_p->at(iter);
 
     th1_p[iter] = (TH1F*)inFile_p->Get(th1Name.c_str());
+
+    if(iter == 0 && strcmp("Pt", ptEtaStr2[ptEtaNum].c_str()) != 0) th1XMin = th1_p[iter]->GetBinCenter(1);
 
     Int_t xMinBin = th1_p[iter]->FindBin(th1XMin);
 

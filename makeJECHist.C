@@ -52,7 +52,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 {
   TF1* f1_p = new TF1("f1_p", "gaus", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
 
-  hist_p->Fit("f1_p", "LL Q");
+  hist_p->Fit("f1_p", "LL Q M");
 
   mean = f1_p->GetParameter(1);
   res = f1_p->GetParameter(2);
