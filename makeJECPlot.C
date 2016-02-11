@@ -10,6 +10,7 @@
 #include "TLatex.h"
 #include "TMath.h"
 #include "TStyle.h"
+#include "TF1.h"
 
 #include <string>
 #include <iostream>
@@ -562,6 +563,14 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     meanLine_p->DrawClone();
     delete meanLine_p;
     
+    if(th1_p[iter]->GetListOfFunctions()->GetSize() != 0){
+      TLine* meanLine2_p = new TLine(th1_p[iter]->GetFunction("f1_p")->GetParameter(1), th1_p[iter]->GetMinimum(), th1_p[iter]->GetFunction("f1_p")->GetParameter(1), th1_p[iter]->GetMaximum()*.8);
+      meanLine2_p->SetLineStyle(2);
+      meanLine2_p->SetLineColor(kRed);
+      meanLine2_p->DrawClone();
+      delete meanLine2_p;
+    }
+
     //    if(centPos == 0) label_p->DrawLatex(.30, .9, Form("#bf{%s}", dirNames_p->at(dirPos).c_str()));
     
     if(ptPos%xBins == 0) label_p->DrawLatex(.30, .88, Form("%d.%d<%s<%d.%d", ptInts_p->at(ptPos), ptDec_p->at(ptPos), ptEtaStr3[ptEtaNum].c_str(), ptInts_p->at(ptPos+1), ptDec_p->at(ptPos+1)));
