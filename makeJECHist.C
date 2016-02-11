@@ -14,7 +14,7 @@
 #include "etaPhiFunc.h"
 
 const Int_t nJetAlgo = 4;
-const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF"};
+const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akCs4PF", "akPu4PF"};
 
 const Int_t nMaxJets = 500;
 
@@ -83,6 +83,32 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     if(hist_p->Integral(tempBin, maxBin+iter) > .9*hist_p->Integral() || tempBin == 1){
       fitLow = hist_p->GetBinCenter(tempBin);
       fitHi = hist_p->GetBinCenter(maxBin+iter);
+      break;
+    }
+  }
+
+  hist_p->Fit("f1_p", "LL Q M", "", fitLow, fitHi);
+
+  mean = f1_p->GetParameter(1);
+  res = f1_p->GetParameter(2);
+
+  meanErr = f1_p->GetParError(1);
+  resErr = f1_p->GetParError(2);
+
+  if(TMath::Abs(mean - 1.0) < 0.01) return;
+  if(f1_p->GetProb() > .01) return;
+
+  Int_t meanBin = hist_p->FindBin(hist_p->GetMean());
+  fitLow = -1;
+  fitHi = -1;
+
+  for(Int_t iter = 1; iter < hist_p->GetNbinsX(); iter++){
+    Int_t tempBin = meanBin - iter;
+    if(tempBin < 1) tempBin = 1;
+    
+    if(hist_p->Integral(tempBin, meanBin+iter) > .9*hist_p->Integral() || tempBin == 1){
+      fitLow = hist_p->GetBinCenter(tempBin);
+      fitHi = hist_p->GetBinCenter(meanBin+iter);
       break;
     }
   }
