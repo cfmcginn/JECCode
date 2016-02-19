@@ -152,13 +152,17 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     }
 
     for(Int_t binIter = xMinBin-1; binIter < th1_p[iter]->GetNbinsX(); binIter++){
-      if(th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) > dirMax[dirPos]) dirMax[dirPos] = th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1);
-      
-      if(th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) < dirMin[dirPos] && th1_p[iter]->GetBinContent(binIter+1) != 0) dirMin[dirPos] = th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1);
+      if(th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) > dirMax[dirPos] && th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) < 1.5) dirMax[dirPos] = th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1);
+ 
+
+      if(th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) < dirMin[dirPos] && th1_p[iter]->GetBinContent(binIter+1) != 0 && th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) > 0.5) dirMin[dirPos] = th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1);
     }
   }
 
+
   for(Int_t iter = 0; iter < nDir; iter++){
+    if(!strcmp(inHistName[inHistNum].c_str(), "Eff")) dirMax[iter] = 1.1;
+
     dirMax[iter] = setMaxMinNice(dirMax[iter], true);
     dirMin[iter] = setMaxMinNice(dirMin[iter], false);
   }
