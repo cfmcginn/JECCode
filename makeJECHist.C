@@ -13,8 +13,17 @@
 #include "getLinBins.h"
 #include "etaPhiFunc.h"
 
-const Int_t nJetAlgo = 4;
-const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF"};
+const Int_t nJetAlgo = 5;
+const std::string jetAlgoTemp[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF"};
+
+const Int_t nJtCat = 3;
+const std::string jtCat[nJtCat] = {"Eta2", "Eta1", "Dijet"};
+
+const Int_t nMeanFit = 2;
+const std::string meanFit[nMeanFit] = {"", "Fit"};
+
+const Int_t nQG = 3;
+const std::string qg[nQG] = {"Inc", "Q", "G"};
 
 const Int_t nMaxJets = 500;
 
@@ -22,6 +31,29 @@ const Int_t nCentBins = 8;
 const Int_t centBins[nCentBins+1] = {200, 140, 100, 80, 60, 40, 20, 10, 0};
 
 const Int_t nMaxGen = 100000;
+
+Bool_t isGoodCaloJet(TString algo, Float_t hcalSum, Float_t ecalSum)
+{
+  if(algo.Index("Calo") >= 0){
+    Float_t totSum = hcalSum+ecalSum;
+    if(hcalSum/totSum < .1) return false;
+    else if(ecalSum/totSum < .05) return false;
+    else return true;
+  }
+  else return false;
+}
+
+Bool_t isGoodPFJet(TString algo, Int_t chargedN, Float_t chargedSum, Float_t neutralSum, Float_t rawPt)
+{
+  if(algo.Index("PF") >= 0){
+    if(chargedN <= 0) return false;
+    //    else if(chargedSum/rawPt >= .98) return false;
+    //    else if(neutralSum/rawPt >= .98) return false;
+    else return true;
+  }
+  else return false;
+}
+
 
 void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtEta[])
 {
@@ -73,12 +105,16 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     }
   }
 
+  Int_t nBins = 1;
+
   Float_t fitLow = -1;
   Float_t fitHi = -1;
 
   for(Int_t iter = 1; iter < hist_p->GetNbinsX(); iter++){
     Int_t tempBin = maxBin - iter;
     if(tempBin < 1) tempBin = 1;
+
+    nBins += 2;
 
     if(hist_p->Integral(tempBin, maxBin+iter) > .90*hist_p->Integral() || tempBin == 1){
       fitLow = hist_p->GetBinCenter(tempBin);
@@ -87,16 +123,19 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     }
   }
 
-  hist_p->Fit("f1_p", "LL Q M", "", fitLow, fitHi);
-
-  mean = f1_p->GetParameter(1);
-  res = f1_p->GetParameter(2);
-
-  meanErr = f1_p->GetParError(1);
-  resErr = f1_p->GetParError(2);
-
-  //  if(TMath::Abs(mean - 1.0) < 0.01) return;
-  if(f1_p->GetProb() > .01) return;
+  if(nBins >= 7){
+    hist_p->Fit("f1_p", "LL Q M", "", fitLow, fitHi);
+    
+    mean = f1_p->GetParameter(1);
+    res = f1_p->GetParameter(2);
+    
+    meanErr = f1_p->GetParError(1);
+    resErr = f1_p->GetParError(2);
+    
+    //  if(TMath::Abs(mean - 1.0) < 0.01) return;
+    if(f1_p->GetProb() > .01) return;
+  }
+  nBins = 1;
 
   Int_t meanBin = hist_p->FindBin(hist_p->GetMean());
   fitLow = -1;
@@ -106,6 +145,8 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     Int_t tempBin = meanBin - iter;
     if(tempBin < 1) tempBin = 1;
     
+    nBins += 2;
+
     if(hist_p->Integral(tempBin, meanBin+iter) > .90*hist_p->Integral() || tempBin == 1){
       fitLow = hist_p->GetBinCenter(tempBin);
       fitHi = hist_p->GetBinCenter(meanBin+iter);
@@ -113,13 +154,16 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     }
   }
 
-  hist_p->Fit("f1_p", "LL Q M", "", fitLow, fitHi);
 
-  mean = f1_p->GetParameter(1);
-  res = f1_p->GetParameter(2);
-
-  meanErr = f1_p->GetParError(1);
-  resErr = f1_p->GetParError(2);
+  if(nBins >= 7){
+    hist_p->Fit("f1_p", "LL Q M", "", fitLow, fitHi);
+    
+    mean = f1_p->GetParameter(1);
+    res = f1_p->GetParameter(2);
+    
+    meanErr = f1_p->GetParError(1);
+    resErr = f1_p->GetParError(2);
+  }
 
   delete f1_p;
 
@@ -127,7 +171,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 }
 
 
-void makeJECHist(const std::string inFileName)
+void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 {
   /*
   TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
@@ -146,6 +190,25 @@ void makeJECHist(const std::string inFileName)
   TChain* genTree_p = new TChain("HiGenParticleAna/hi");
   TChain* jetTree_p[nJetAlgo];
 
+  std::string jetAlgo[nJetAlgo];
+
+  for(Int_t iter = 0; iter < nJetAlgo; iter++){
+    jetAlgo[iter] = jetAlgoTemp[iter];
+    /*
+    TString tempjt = jetAlgoTemp[iter].c_str();
+    Int_t pos = tempjt.Index("Vs");
+
+    if(!isPbPb && pos >= 0){
+      jetAlgo[iter] = Form("%s%s", jetAlgoTemp[iter].substr(0, pos).c_str(), jetAlgoTemp[iter].substr(pos+2, jetAlgoTemp[iter].length() - pos - 2).c_str());
+    }
+    else jetAlgo[iter] = jetAlgoTemp[iter];
+    */
+  }
+
+  for(Int_t iter = 0; iter < nJetAlgo; iter++){
+    std::cout << "Algos: " << jetAlgo[iter] << std::endl;
+  }
+
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     jetTree_p[iter] = new TChain(Form("%sJetAnalyzer/t", jetAlgo[iter].c_str()));
   }
@@ -157,12 +220,16 @@ void makeJECHist(const std::string inFileName)
     jetTree_p[iter]->Add(inFileName.c_str());
   }
 
-  Int_t hiBin_;
+  Int_t hiBin_ = -1;
+  Float_t vz_;
 
   hiTree_p->SetBranchStatus("*", 0);
-  hiTree_p->SetBranchStatus("hiBin", 1);
+  if(isPbPb) hiTree_p->SetBranchStatus("hiBin", 1);
+  hiTree_p->SetBranchStatus("vz", 1);
 
-  hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+  if(isPbPb) hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+  hiTree_p->SetBranchAddress("vz", &vz_);
+
   /*
   std::vector<float>* genPt_p = 0;
   std::vector<float>* genEta_p = 0;
@@ -185,15 +252,22 @@ void makeJECHist(const std::string inFileName)
   Float_t jtRawPt_[nJetAlgo][nMaxJets];
   Float_t jtEta_[nJetAlgo][nMaxJets];
   Float_t jtPhi_[nJetAlgo][nMaxJets];
+  Float_t jtHCalSum_[nJetAlgo][nMaxJets];
+  Float_t jtECalSum_[nJetAlgo][nMaxJets];
+  Float_t jtNeutralSum_[nJetAlgo][nMaxJets];
+  Float_t jtChargedSum_[nJetAlgo][nMaxJets];
+  Int_t jtChargedN_[nJetAlgo][nMaxJets];
   Float_t refPt_[nJetAlgo][nMaxJets];
   Float_t refEta_[nJetAlgo][nMaxJets];
   Int_t refSubID_[nJetAlgo][nMaxJets];
+  Int_t refPartFlav_[nJetAlgo][nMaxJets];
 
   Int_t nGenJt_[nJetAlgo]; 
   Float_t genJtPt_[nJetAlgo][nMaxJets];
   Float_t genJtEta_[nJetAlgo][nMaxJets];
   Float_t genJtPhi_[nJetAlgo][nMaxJets];
   Int_t genJtMatchIndex_[nJetAlgo][nMaxJets];
+  Int_t genSubId_[nJetAlgo][nMaxJets];
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     jetTree_p[iter]->SetBranchStatus("*", 0);
@@ -202,28 +276,42 @@ void makeJECHist(const std::string inFileName)
     jetTree_p[iter]->SetBranchStatus("rawpt", 1);
     jetTree_p[iter]->SetBranchStatus("jteta", 1);
     jetTree_p[iter]->SetBranchStatus("jtphi", 1);
+    jetTree_p[iter]->SetBranchStatus("hcalSum", 1);
+    jetTree_p[iter]->SetBranchStatus("ecalSum", 1);
+    jetTree_p[iter]->SetBranchStatus("chargedSum", 1);
+    jetTree_p[iter]->SetBranchStatus("neutralSum", 1);
+    jetTree_p[iter]->SetBranchStatus("chargedN", 1);
     jetTree_p[iter]->SetBranchStatus("refpt", 1);
     jetTree_p[iter]->SetBranchStatus("refeta", 1);
     jetTree_p[iter]->SetBranchStatus("subid", 1);
+    jetTree_p[iter]->SetBranchStatus("refparton_flavor", 1);
     jetTree_p[iter]->SetBranchStatus("ngen", 1);
     jetTree_p[iter]->SetBranchStatus("genpt", 1);
     jetTree_p[iter]->SetBranchStatus("geneta", 1);
     jetTree_p[iter]->SetBranchStatus("genphi", 1);
     jetTree_p[iter]->SetBranchStatus("genmatchindex", 1);
+    jetTree_p[iter]->SetBranchStatus("gensubid", 1);
 
     jetTree_p[iter]->SetBranchAddress("nref", &nJt_[iter]);
     jetTree_p[iter]->SetBranchAddress("jtpt", jtPt_[iter]);
     jetTree_p[iter]->SetBranchAddress("rawpt", jtRawPt_[iter]);
     jetTree_p[iter]->SetBranchAddress("jteta", jtEta_[iter]);
     jetTree_p[iter]->SetBranchAddress("jtphi", jtPhi_[iter]);
+    jetTree_p[iter]->SetBranchAddress("hcalSum", jtHCalSum_[iter]);
+    jetTree_p[iter]->SetBranchAddress("ecalSum", jtECalSum_[iter]);
+    jetTree_p[iter]->SetBranchAddress("neutralSum", jtNeutralSum_[iter]);
+    jetTree_p[iter]->SetBranchAddress("chargedSum", jtChargedSum_[iter]);
+    jetTree_p[iter]->SetBranchAddress("chargedN", jtChargedN_[iter]);
     jetTree_p[iter]->SetBranchAddress("refpt", refPt_[iter]);
     jetTree_p[iter]->SetBranchAddress("refeta", refEta_[iter]);
     jetTree_p[iter]->SetBranchAddress("subid", refSubID_[iter]);
+    jetTree_p[iter]->SetBranchAddress("refparton_flavor", refPartFlav_[iter]);
     jetTree_p[iter]->SetBranchAddress("ngen", &nGenJt_[iter]);
     jetTree_p[iter]->SetBranchAddress("genpt", genJtPt_[iter]);
     jetTree_p[iter]->SetBranchAddress("geneta", genJtEta_[iter]);
     jetTree_p[iter]->SetBranchAddress("genphi", genJtPhi_[iter]);
     jetTree_p[iter]->SetBranchAddress("genmatchindex", genJtMatchIndex_[iter]);
+    jetTree_p[iter]->SetBranchAddress("gensubid", genSubId_[iter]);
   }
   
   const Int_t nJtPtBins = 29;
@@ -246,130 +334,170 @@ void makeJECHist(const std::string inFileName)
     std::cout << "Eta Bin, val: " << iter << ", " << jtEtaBins[iter] << std::endl;
   }
 
-  TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVPt_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  Int_t nCentBinsTemp = nCentBins;
+  if(!isPbPb) nCentBinsTemp = 1;
 
-  TH2F* jtRecoOverRawVPt_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVPt_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVPt_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  const Int_t nCentBins2 = nCentBinsTemp;
 
-  TH2F* jtRawOverGenVPt_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVPt_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVPt_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVPt_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
-  TH2F* jtEffVPt_p[nJetAlgo][nCentBins];
-  TH1F* jtEffVPt_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtEffVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtRecoOverRawVPt_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRecoOverRawVPt_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverRawVPt_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverRawVPt_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
-  TH2F* jtEffVPtEta_p[nJetAlgo][nCentBins];
-  TH2F* jtEffVPtEta_Denom_p[nJetAlgo][nCentBins];
+  TH2F* jtRawOverGenVPt_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRawOverGenVPt_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRawOverGenVPt_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRawOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
-  TH2F* jtRecoOverGenVEta_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVEta_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVEta_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtEffVPt_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtEffVPt_Mean_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtEffVPt_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
-  TH2F* jtRecoOverRawVEta_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVEta_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVEta_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRecoOverRawVEta_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtFakeVPt_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtFakeVPt_Mean_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtFakeVPt_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
-  TH2F* jtRawOverGenVEta_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVEta_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVEta_Res_p[nJetAlgo][nCentBins];
-  TH1F* jtRawOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtEffVPtEta_p[nJetAlgo][nCentBins2][nQG];
+  TH2F* jtEffVPtEta_Denom_p[nJetAlgo][nCentBins2][nQG];
 
-  TH2F* jtEffVEta_p[nJetAlgo][nCentBins];
-  TH1F* jtEffVEta_Mean_p[nJetAlgo][nCentBins];
-  TH1F* jtEffVEta_MeanResPts_p[nJetAlgo][nCentBins][nJtPtBins];
+  TH2F* jtRecoOverGenVEta_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRecoOverGenVEta_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVEta_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
+
+  TH2F* jtRecoOverRawVEta_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRecoOverRawVEta_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverRawVEta_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRecoOverRawVEta_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
+
+  TH2F* jtRawOverGenVEta_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtRawOverGenVEta_Mean_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRawOverGenVEta_Res_p[nJetAlgo][nCentBins2][nQG][nMeanFit];
+  TH1F* jtRawOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
+
+  TH2F* jtEffVEta_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtEffVEta_Mean_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtEffVEta_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
+
+  TH2F* jtFakeVEta_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtFakeVEta_Mean_p[nJetAlgo][nCentBins2][nQG];
+  TH1F* jtFakeVEta_MeanResPts_p[nJetAlgo][nCentBins2][nQG][nJtPtBins];
 
   Int_t nNoLeadEle = 0;
   Int_t nNoSubleadEle = 0;
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      jtRecoOverGenVPt_p[iter][centIter] = new TH2F(Form("jtRecoOverGenVPt_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T}; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+      std::string centStr = "PP";
+      if(isPbPb) centStr = Form("cent%dto%d", centBins[centIter+1]/2, centBins[centIter]/2);
 
-      jtRecoOverRawVPt_p[iter][centIter] = new TH2F(Form("jtRecoOverRawVPt_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet p_{T}; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	jtRecoOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
-      jtRawOverGenVPt_p[iter][centIter] = new TH2F(Form("jtRawOverGenVPt_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T}; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+	jtRecoOverRawVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T}; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
-      jtEffVPt_p[iter][centIter] = new TH2F(Form("jtEffVPt_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
+	jtRawOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
-      jtEffVPtEta_p[iter][centIter] = new TH2F(Form("jtEffVPtEta_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
-      jtEffVPtEta_Denom_p[iter][centIter] = new TH2F(Form("jtEffVPtEta_Denom_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
+	jtEffVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtEffVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
 
-      jtRecoOverGenVPt_Mean_p[iter][centIter] = new TH1F(Form("jtRecoOverGenVPt_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtFakeVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
 
-      jtRecoOverRawVPt_Mean_p[iter][centIter] = new TH1F(Form("jtRecoOverRawVPt_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet p_{T};#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtEffVPtEta_p[iter][centIter][qgIter] = new TH2F(Form("jtEffVPtEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
+	jtEffVPtEta_Denom_p[iter][centIter][qgIter] = new TH2F(Form("jtEffVPtEta_%s_Denom_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
+      
 
-      jtRawOverGenVPt_Mean_p[iter][centIter] = new TH1F(Form("jtRawOverGenVPt_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
 
-      jtEffVPt_Mean_p[iter][centIter] = new TH1F(Form("jtEffVPt_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
 
-      jtRecoOverGenVPt_Res_p[iter][centIter] = new TH1F(Form("jtRecoOverGenVPt_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	}
 
-      jtRecoOverRawVPt_Res_p[iter][centIter] = new TH1F(Form("jtRecoOverRawVPt_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet p_{T};#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
-
-      jtRawOverGenVPt_Res_p[iter][centIter] = new TH1F(Form("jtRawOverGenVPt_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet p_{T};#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
-
-      jtRecoOverGenVEta_p[iter][centIter] = new TH2F(Form("jtRecoOverGenVEta_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
-
-      jtRecoOverRawVEta_p[iter][centIter] = new TH2F(Form("jtRecoOverRawVEta_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet #eta; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
-
-      jtRawOverGenVEta_p[iter][centIter] = new TH2F(Form("jtRawOverGenVEta_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
-
-      jtEffVEta_p[iter][centIter] = new TH2F(Form("jtEffVEta_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
-
-      jtRecoOverGenVEta_Mean_p[iter][centIter] = new TH1F(Form("jtRecoOverGenVEta_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtRecoOverRawVEta_Mean_p[iter][centIter] = new TH1F(Form("jtRecoOverRawVEta_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet #eta;#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtRawOverGenVEta_Mean_p[iter][centIter] = new TH1F(Form("jtRawOverGenVEta_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtEffVEta_Mean_p[iter][centIter] = new TH1F(Form("jtEffVEta_Mean_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtRecoOverGenVEta_Res_p[iter][centIter] = new TH1F(Form("jtRecoOverGenVEta_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtRecoOverRawVEta_Res_p[iter][centIter] = new TH1F(Form("jtRecoOverRawVEta_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Reco. Jet #eta;#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      jtRawOverGenVEta_Res_p[iter][centIter] = new TH1F(Form("jtRawOverGenVEta_Res_%s_cent%dto%d_h", jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";Gen. Jet #eta;#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
-
-      for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	Int_t ptLowInt = std::trunc(jtPtBins[jtIter]);
-	Int_t ptHiInt = std::trunc(jtPtBins[jtIter+1]);
+	jtEffVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtEffVPt_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
 	
-	Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
-	Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
+	jtFakeVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVPt_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
 	
-	jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_MeanResPts_Pt%dp%dTo%dp%d_%s_cent%dto%d_h", ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
-
-	jtRecoOverRawVPt_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRecoOverRawVPt_MeanResPts_Pt%dp%dTo%dp%d_%s_cent%dto%d_h", ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
-
-	jtRawOverGenVPt_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRawOverGenVPt_MeanResPts_Pt%dp%dTo%dp%d_%s_cent%dto%d_h", ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
-
-	jtEffVPt_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtEffVPt_MeanResPts_Pt%dp%dTo%dp%d_%s_cent%dto%d_h", ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Eff. (%s));Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
-      }
-
-
-      for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
-	Int_t etaLowInt = std::trunc(jtEtaBins[jtIter]);
-	Int_t etaHiInt = std::trunc(jtEtaBins[jtIter+1]);
-
-	Int_t etaLowDec = std::trunc(jtEtaBins[jtIter]*10 - etaLowInt*10);
-	Int_t etaHiDec = std::trunc(jtEtaBins[jtIter+1]*10 - etaHiInt*10);
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  
+	  jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  
+	  jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	}
 	
-	jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_MeanResPts_Eta%dp%dTo%dp%d_%s_cent%dto%d_h", etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	jtRecoOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
-	jtRecoOverRawVEta_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRecoOverRawVEta_MeanResPts_Eta%dp%dTo%dp%d_%s_cent%dto%d_h", etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	jtRecoOverRawVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
-	jtRawOverGenVEta_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtRawOverGenVEta_MeanResPts_Eta%dp%dTo%dp%d_%s_cent%dto%d_h", etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	jtRawOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
-	jtEffVEta_MeanResPts_p[iter][centIter][jtIter] = new TH1F(Form("jtEffVEta_MeanResPts_Eta%dp%dTo%dp%d_%s_cent%dto%d_h", etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centBins[centIter+1]/2, centBins[centIter]/2), Form(";(Eff. (%s));Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
+	jtEffVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtEffVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
+	
+	jtFakeVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
+
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+
+	  jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  
+	  jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	}
+	
+	jtEffVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtEffVEta_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	
+	jtFakeVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVEta_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  
+	  jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  
+	  jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	}
+	
+
+	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	  Int_t ptLowInt = std::trunc(jtPtBins[jtIter]);
+	  Int_t ptHiInt = std::trunc(jtPtBins[jtIter+1]);
+	  
+	  Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
+	  Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
+	  
+	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	  
+	  jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	  
+	  jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	  
+	  jtEffVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtEffVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
+	  
+	  jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
+	}
+	
+	
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  Int_t etaLowInt = std::trunc(jtEtaBins[jtIter]);
+	  Int_t etaHiInt = std::trunc(jtEtaBins[jtIter+1]);
+	  
+	  Int_t etaLowDec = std::trunc(jtEtaBins[jtIter]*10 - etaLowInt*10);
+	  Int_t etaHiDec = std::trunc(jtEtaBins[jtIter+1]*10 - etaHiInt*10);
+	  
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  
+	  jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  
+	  jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  
+	  jtEffVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtEffVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
+	  
+	  jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
+	}
       }
     }
   }
@@ -388,12 +516,16 @@ void makeJECHist(const std::string inFileName)
 
     Int_t centPos = -1;
 
-    for(Int_t iter = 0; iter < nCentBins; iter++){
-      if(hiBin_ < centBins[iter] && hiBin_ >= centBins[iter+1]){
-	centPos = iter;
-	break;
+    if(TMath::Abs(vz_) > 15) continue;
+
+    if(isPbPb)
+      for(Int_t iter = 0; iter < nCentBins2; iter++){
+	if(hiBin_ < centBins[iter] && hiBin_ >= centBins[iter+1]){
+	  centPos = iter;
+	  break;
+	}
       }
-    }
+    else centPos = 0;
 
     Float_t maxElePt = -1;
     Float_t maxEleEta = -100;
@@ -431,12 +563,27 @@ void makeJECHist(const std::string inFileName)
       jetTree_p[iter]->GetEntry(entry);
     }
 
+    Bool_t skipEvent = false;
+    
+    for(Int_t iter = 0; iter < nGenJt_[0]; iter++){
+      if(genJtPt_[0][iter] < 15) continue;
+      if(TMath::Abs(genJtEta_[0][iter]) > 3.0){
+	skipEvent = true;
+	break;
+      }
+    }
+
+    if(skipEvent) continue;
+
     for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
       for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
 	if(TMath::Abs(jtEta_[algoIter][jtIter]) > 2.0) continue;
-       
-	if(jtPt_[algoIter][jtIter] < 5.0) continue;
+       	if(jtPt_[algoIter][jtIter] < 5.0) continue;
 
+	if(isPbPb && !isGoodCaloJet(jetAlgoTemp[algoIter].c_str(), jtHCalSum_[algoIter][jtIter], jtECalSum_[algoIter][jtIter]) && !isGoodPFJet(jetAlgoTemp[algoIter].c_str(), jtChargedN_[algoIter][jtIter], jtChargedSum_[algoIter][jtIter], jtNeutralSum_[algoIter][jtIter], jtRawPt_[algoIter][jtIter])) continue;
+	
+
+	
 	//	if(refSubID_[algoIter][jtIter] != 0 && refSubID_[algoIter][jtIter] != -1) continue;
 
 	if(maxElePt > 10)
@@ -445,48 +592,56 @@ void makeJECHist(const std::string inFileName)
 	if(twoElePt > 5)
 	  if(getDR(jtEta_[algoIter][jtIter], jtPhi_[algoIter][jtIter], twoEleEta, twoElePhi) < 0.4) continue;
 
-	jtRecoOverGenVPt_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	Int_t qgPos[2] = {0, -1};
+	if(TMath::Abs(refPartFlav_[algoIter][jtIter]) < 9) qgPos[1] = 1;
+	else if(TMath::Abs(refPartFlav_[algoIter][jtIter]) == 21) qgPos[1] = 2;
 
-	jtRecoOverRawVPt_p[algoIter][centPos]->Fill(jtPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
+	for(Int_t qgIter = 0; qgIter < 2; qgIter++){
+	  if(qgPos[qgIter] == -1) continue;
 
-	jtRawOverGenVPt_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	  jtRecoOverGenVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+
+	  jtRecoOverRawVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
+
+	  jtRawOverGenVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
 	
-	for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
-	  if(refPt_[algoIter][jtIter] > jtPtBins[jtIter2] && refPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
-	    jtRecoOverGenVPt_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
-	    jtRawOverGenVPt_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);	
-	    break;
-	  }
-	}
-
-	for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
-	  if(jtPt_[algoIter][jtIter] > jtPtBins[jtIter2] && jtPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
-	    jtRecoOverRawVPt_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
-	    break;
-	  }
-	}
-
-
-	if(refPt_[algoIter][jtIter] > 30){
-	  jtRecoOverGenVEta_p[algoIter][centPos]->Fill(refEta_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
-	  jtRawOverGenVEta_p[algoIter][centPos]->Fill(refEta_[algoIter][jtIter], jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
-	
-	  for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
-	    if(refEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && refEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
-	      jtRecoOverGenVEta_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
-	      jtRawOverGenVEta_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);	
+	  for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
+	    if(refPt_[algoIter][jtIter] > jtPtBins[jtIter2] && refPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
+	      jtRecoOverGenVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	      jtRawOverGenVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);	
 	      break;
 	    }
 	  }
-	}
 
-	if(jtPt_[algoIter][jtIter] > 30){
-	  jtRecoOverRawVEta_p[algoIter][centPos]->Fill(jtEta_[algoIter][jtIter], jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
-
-	  for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
-	    if(jtEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && jtEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
-	      jtRecoOverRawVEta_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
+	  for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
+	    if(jtPt_[algoIter][jtIter] > jtPtBins[jtIter2] && jtPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
+	      jtRecoOverRawVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
 	      break;
+	    }
+	  }
+
+
+	  if(refPt_[algoIter][jtIter] > 30){
+	    jtRecoOverGenVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(refEta_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	    jtRawOverGenVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(refEta_[algoIter][jtIter], jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	    
+	    for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
+	      if(refEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && refEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
+		jtRecoOverGenVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+		jtRawOverGenVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtRawPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);	
+		break;
+	      }
+	    }
+	  }
+
+	  if(jtPt_[algoIter][jtIter] > 30){
+	    jtRecoOverRawVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtEta_[algoIter][jtIter], jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
+
+	    for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
+	      if(jtEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && jtEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
+		jtRecoOverRawVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
+		break;
+	      }
 	    }
 	  }
 	}
@@ -505,6 +660,8 @@ void makeJECHist(const std::string inFileName)
 
 	if(genJtPt_[algoIter][jtIter] < 5.0) break;
 
+	if(genSubId_[algoIter][jtIter] != 0) continue;
+
         if(maxElePt > 10)
           if(getDR(genJtEta_[algoIter][jtIter], genJtPhi_[algoIter][jtIter], maxEleEta, maxElePhi) < 0.4) continue;
 
@@ -515,8 +672,12 @@ void makeJECHist(const std::string inFileName)
 	Float_t tempDR = 999;
 	Int_t tempPos = -1;
 
+	
+
 	for(Int_t jtIter2 = 0; jtIter2 < nJt_[algoIter]; jtIter2++){
 	  if(isUsedRecoJet[jtIter2]) continue;
+
+	  if(isPbPb && !isGoodCaloJet(jetAlgoTemp[algoIter].c_str(), jtHCalSum_[algoIter][jtIter2], jtECalSum_[algoIter][jtIter2]) && !isGoodPFJet(jetAlgoTemp[algoIter].c_str(), jtChargedN_[algoIter][jtIter2], jtChargedSum_[algoIter][jtIter2], jtNeutralSum_[algoIter][jtIter2], jtRawPt_[algoIter][jtIter2])) continue;
 
 	  if(getDR(genJtEta_[algoIter][jtIter], genJtPhi_[algoIter][jtIter], jtEta_[algoIter][jtIter2], jtPhi_[algoIter][jtIter2]) < tempDR){
 	    tempPos = jtIter2;
@@ -529,31 +690,80 @@ void makeJECHist(const std::string inFileName)
 	  isUsedRecoJet[tempPos] = true;
 	}
        
+	Int_t qgPos[2] = {0, -1};
+	if(TMath::Abs(refPartFlav_[algoIter][tempPos]) < 9) qgPos[1] = 1;
+	else if(TMath::Abs(refPartFlav_[algoIter][tempPos]) == 21) qgPos[1] = 2;
+
 	//	if(genJtMatchIndex_[algoIter][jtIter] >= 0) fillVal = 1;
 
-	jtEffVPt_p[algoIter][centPos]->Fill(genJtPt_[algoIter][jtIter], fillVal);
+	for(Int_t qgIter = 0; qgIter < 2; qgIter++){
+	  if(qgPos[qgIter] == -1) continue;
 
-	jtEffVPtEta_Denom_p[algoIter][centPos]->Fill(genJtEta_[algoIter][jtIter], genJtPt_[algoIter][jtIter]);
-	if(fillVal) jtEffVPtEta_p[algoIter][centPos]->Fill(genJtEta_[algoIter][jtIter], genJtPt_[algoIter][jtIter]);
+	  jtEffVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(genJtPt_[algoIter][jtIter], fillVal);
+
+	  jtEffVPtEta_Denom_p[algoIter][centPos][qgPos[qgIter]]->Fill(genJtEta_[algoIter][jtIter], genJtPt_[algoIter][jtIter]);
+	  if(fillVal) jtEffVPtEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(genJtEta_[algoIter][jtIter], genJtPt_[algoIter][jtIter]);
 	
-	for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
-	  if(genJtPt_[algoIter][jtIter] > jtPtBins[jtIter2] && genJtPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
-	    jtEffVPt_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(fillVal);
-	    break;
-	  }
-	}
-
-	if(genJtPt_[algoIter][jtIter] > 30){
-	  jtEffVEta_p[algoIter][centPos]->Fill(genJtEta_[algoIter][jtIter], fillVal);
-
-	  for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
-	    if(genJtEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && genJtEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
-	      jtEffVEta_MeanResPts_p[algoIter][centPos][jtIter2]->Fill(fillVal);
+	  for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
+	    if(genJtPt_[algoIter][jtIter] > jtPtBins[jtIter2] && genJtPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
+	      jtEffVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(fillVal);
 	      break;
+	    }
+	  }
+
+	  if(genJtPt_[algoIter][jtIter] > 30){
+	    jtEffVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(genJtEta_[algoIter][jtIter], fillVal);
+
+	    for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
+	      if(genJtEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && genJtEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
+		jtEffVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(fillVal);
+		break;
+	      }
 	    }
 	  }
 	}
       }
+
+      for(Int_t boolIter = 0; boolIter < boolSize; boolIter++){
+	if(TMath::Abs(jtEta_[algoIter][boolIter]) > 2.0) continue;
+
+	if(jtPt_[algoIter][boolIter] < 5.0) continue;
+
+	if(isPbPb && !isGoodCaloJet(jetAlgoTemp[algoIter].c_str(), jtHCalSum_[algoIter][boolIter], jtECalSum_[algoIter][boolIter]) && !isGoodPFJet(jetAlgoTemp[algoIter].c_str(), jtChargedN_[algoIter][boolIter], jtChargedSum_[algoIter][boolIter], jtNeutralSum_[algoIter][boolIter], jtRawPt_[algoIter][boolIter])) continue;
+
+	Int_t fillVal = 1;
+	if(isUsedRecoJet[boolIter]) fillVal = 0;
+
+        Int_t qgPos[2] = {0, -1};
+        if(TMath::Abs(refPartFlav_[algoIter][boolIter]) < 9) qgPos[1] = 1;
+        else if(TMath::Abs(refPartFlav_[algoIter][boolIter]) == 21) qgPos[1] = 2;
+
+	for(Int_t qgIter = 0; qgIter < 2; qgIter++){
+          if(qgPos[qgIter] == -1) continue;
+
+	  jtFakeVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtPt_[algoIter][boolIter], fillVal);
+	
+	  for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
+	    if(jtPt_[algoIter][boolIter] > jtPtBins[jtIter2] && jtPt_[algoIter][boolIter] < jtPtBins[jtIter2+1]){
+	      jtFakeVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(fillVal);
+	      break;
+	    }
+	  }
+	  
+	  if(jtPt_[algoIter][boolIter] > 30){
+	    jtFakeVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtEta_[algoIter][boolIter], fillVal);
+	    
+	    for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
+	      if(jtEta_[algoIter][boolIter] > jtEtaBins[jtIter2] && jtEta_[algoIter][boolIter] < jtEtaBins[jtIter2+1]){
+		jtFakeVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(fillVal);
+		break;
+	      }
+	    }
+	  }
+	}
+       
+      }
+
     }
   }
 
@@ -561,67 +771,118 @@ void makeJECHist(const std::string inFileName)
   std::cout << "#Events with no sublead electron: " << nNoSubleadEle << std::endl;
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	Float_t tempMean = -999;
-	Float_t tempMeanErr = -999;
-	Float_t tempRes = -999;
-	Float_t tempResErr = -999;
-
-	FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	  Float_t tempMean[nMeanFit];
+	  Float_t tempMeanErr[nMeanFit];
+	  Float_t tempRes[nMeanFit];
+	  Float_t tempResErr[nMeanFit];
+	  
+	  tempMean[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();	
+	  tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  
+	  FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
 	
-	jtRecoOverGenVPt_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRecoOverGenVPt_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRecoOverGenVPt_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRecoOverGenVPt_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  tempMean[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
+	  tempRes[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
 
-	FitGauss(jtRecoOverRawVPt_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
+	  FitGauss(jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
+	  
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  tempMean[0] = jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
+	  tempRes[0] = jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  
+	  FitGauss(jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
 
-	jtRecoOverRawVPt_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRecoOverRawVPt_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRecoOverRawVPt_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRecoOverRawVPt_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  jtEffVPt_Mean_p[iter][centIter][qgIter]->SetBinContent(jtIter+1, jtEffVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean());
+	  jtEffVPt_Mean_p[iter][centIter][qgIter]->SetBinError(jtIter+1, jtEffVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError());
+	  
+	  jtFakeVPt_Mean_p[iter][centIter][qgIter]->SetBinContent(jtIter+1, jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean());
+	  jtFakeVPt_Mean_p[iter][centIter][qgIter]->SetBinError(jtIter+1, jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError());
+	}
 
-	FitGauss(jtRawOverGenVPt_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  Float_t tempMean[nMeanFit];
+	  Float_t tempMeanErr[nMeanFit];
+	  Float_t tempRes[nMeanFit];
+	  Float_t tempResErr[nMeanFit];
 
-	jtRawOverGenVPt_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRawOverGenVPt_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRawOverGenVPt_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRawOverGenVPt_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
+	  tempMean[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
+	  tempRes[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  
+	  FitGauss(jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
+	  
+	  
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  tempMean[0] = jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
+	  tempRes[0] = jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  
+	  FitGauss(jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
+	  
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  tempMean[0] = jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
+	  tempRes[0] = jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  
+	  FitGauss(jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
 
-	jtEffVPt_Mean_p[iter][centIter]->SetBinContent(jtIter+1, jtEffVPt_MeanResPts_p[iter][centIter][jtIter]->GetMean());
-	jtEffVPt_Mean_p[iter][centIter]->SetBinError(jtIter+1, jtEffVPt_MeanResPts_p[iter][centIter][jtIter]->GetMeanError());
-      }
-
-      for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
-	Float_t tempMean = -999;
-	Float_t tempMeanErr = -999;
-	Float_t tempRes = -999;
-	Float_t tempResErr = -999;
-
-        FitGauss(jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
-
-	jtRecoOverGenVEta_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRecoOverGenVEta_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRecoOverGenVEta_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRecoOverGenVEta_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
-
-        FitGauss(jtRecoOverRawVEta_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
-
-	jtRecoOverRawVEta_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRecoOverRawVEta_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRecoOverRawVEta_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRecoOverRawVEta_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
-
-        FitGauss(jtRawOverGenVEta_MeanResPts_p[iter][centIter][jtIter], tempMean, tempMeanErr, tempRes, tempResErr);
-
-	jtRawOverGenVEta_Mean_p[iter][centIter]->SetBinContent(jtIter+1, tempMean);
-	jtRawOverGenVEta_Mean_p[iter][centIter]->SetBinError(jtIter+1, tempMeanErr);
-	jtRawOverGenVEta_Res_p[iter][centIter]->SetBinContent(jtIter+1, tempRes);
-	jtRawOverGenVEta_Res_p[iter][centIter]->SetBinError(jtIter+1, tempResErr);
-
-	jtEffVEta_Mean_p[iter][centIter]->SetBinContent(jtIter+1, jtEffVEta_MeanResPts_p[iter][centIter][jtIter]->GetMean());
-	jtEffVEta_Mean_p[iter][centIter]->SetBinError(jtIter+1, jtEffVEta_MeanResPts_p[iter][centIter][jtIter]->GetMeanError());
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	  }
+	  
+	  jtEffVEta_Mean_p[iter][centIter][qgIter]->SetBinContent(jtIter+1, jtEffVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean());
+	  jtEffVEta_Mean_p[iter][centIter][qgIter]->SetBinError(jtIter+1, jtEffVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError());
+	  
+	  jtFakeVEta_Mean_p[iter][centIter][qgIter]->SetBinContent(jtIter+1, jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean());
+	  jtFakeVEta_Mean_p[iter][centIter][qgIter]->SetBinError(jtIter+1, jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError());
+	}
       }
     }
   }
@@ -658,49 +919,64 @@ void makeJECHist(const std::string inFileName)
       dir_p->cd();
     }
 
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      jtRecoOverGenVPt_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverGenVPt_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverGenVPt_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVPt_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVPt_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVPt_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVPt_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVPt_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVPt_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtEffVPt_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtEffVPt_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	jtRecoOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtRecoOverRawVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtRawOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	}
+	
+	jtEffVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtEffVPt_Mean_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtFakeVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtFakeVPt_Mean_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	
+      //      jtEffVPtEta_p[iter][centIter][qgIter]->Write(Form("%s_NUM",jtEffVPtEta_p[iter][centIter][qgIter]->GetName()), TObject::kOverwrite);
+      //      jtEffVPtEta_Denom_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtEffVPtEta_p[iter][centIter][qgIter]->Divide(jtEffVPtEta_Denom_p[iter][centIter][qgIter]);
+	jtEffVPtEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 
-      //      jtEffVPtEta_p[iter][centIter]->Write(Form("%s_NUM",jtEffVPtEta_p[iter][centIter]->GetName()), TObject::kOverwrite);
-      //      jtEffVPtEta_Denom_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtEffVPtEta_p[iter][centIter]->Divide(jtEffVPtEta_Denom_p[iter][centIter]);
-      jtEffVPtEta_p[iter][centIter]->Write("", TObject::kOverwrite);
+	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtEffVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	}
 
-      for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtRecoOverRawVPt_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtRawOverGenVPt_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtEffVPt_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-      }
-
-      jtRecoOverGenVEta_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverGenVEta_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverGenVEta_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVEta_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVEta_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRecoOverRawVEta_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVEta_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVEta_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtRawOverGenVEta_Res_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtEffVEta_p[iter][centIter]->Write("", TObject::kOverwrite);
-      jtEffVEta_Mean_p[iter][centIter]->Write("", TObject::kOverwrite);
-      
-      for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
-	jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtRecoOverRawVEta_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtRawOverGenVEta_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
-	jtEffVEta_MeanResPts_p[iter][centIter][jtIter]->Write("", TObject::kOverwrite);
+	jtRecoOverGenVEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtRecoOverRawVEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtRawOverGenVEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	}
+	
+	jtEffVEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtEffVEta_Mean_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtFakeVEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	jtFakeVEta_Mean_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+	
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtEffVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	}
       }
     }
   }
@@ -709,46 +985,62 @@ void makeJECHist(const std::string inFileName)
   delete outFile_p;
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      delete jtRecoOverGenVPt_p[iter][centIter];
-      delete jtRecoOverGenVPt_Mean_p[iter][centIter];
-      delete jtRecoOverGenVPt_Res_p[iter][centIter];
-      delete jtRecoOverRawVPt_p[iter][centIter];
-      delete jtRecoOverRawVPt_Mean_p[iter][centIter];
-      delete jtRecoOverRawVPt_Res_p[iter][centIter];
-      delete jtRawOverGenVPt_p[iter][centIter];
-      delete jtRawOverGenVPt_Mean_p[iter][centIter];
-      delete jtRawOverGenVPt_Res_p[iter][centIter];
-      delete jtEffVPt_p[iter][centIter];
-      delete jtEffVPt_Mean_p[iter][centIter];
-
-      delete jtEffVPtEta_p[iter][centIter];
-      delete jtEffVPtEta_Denom_p[iter][centIter];
-      
-      for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	delete jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtIter];
-	delete jtRecoOverRawVPt_MeanResPts_p[iter][centIter][jtIter];
-	delete jtRawOverGenVPt_MeanResPts_p[iter][centIter][jtIter];
-	delete jtEffVPt_MeanResPts_p[iter][centIter][jtIter];
-      }
-
-      delete jtRecoOverGenVEta_p[iter][centIter];
-      delete jtRecoOverGenVEta_Mean_p[iter][centIter];
-      delete jtRecoOverGenVEta_Res_p[iter][centIter];
-      delete jtRecoOverRawVEta_p[iter][centIter];
-      delete jtRecoOverRawVEta_Mean_p[iter][centIter];
-      delete jtRecoOverRawVEta_Res_p[iter][centIter];
-      delete jtRawOverGenVEta_p[iter][centIter];
-      delete jtRawOverGenVEta_Mean_p[iter][centIter];
-      delete jtRawOverGenVEta_Res_p[iter][centIter];
-      delete jtEffVEta_p[iter][centIter];
-      delete jtEffVEta_Mean_p[iter][centIter];
-
-      for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
-	delete jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtIter];
-	delete jtRecoOverRawVEta_MeanResPts_p[iter][centIter][jtIter];
-	delete jtRawOverGenVEta_MeanResPts_p[iter][centIter][jtIter];
-	delete jtEffVEta_MeanResPts_p[iter][centIter][jtIter];
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	delete jtRecoOverGenVPt_p[iter][centIter][qgIter];
+	delete jtRecoOverRawVPt_p[iter][centIter][qgIter];
+	delete jtRawOverGenVPt_p[iter][centIter][qgIter];
+	
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  delete jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter];
+	  delete jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter];
+	}
+	
+	delete jtEffVPt_p[iter][centIter][qgIter];
+	delete jtEffVPt_Mean_p[iter][centIter][qgIter];
+	delete jtFakeVPt_p[iter][centIter][qgIter];
+	delete jtFakeVPt_Mean_p[iter][centIter][qgIter];
+	
+	delete jtEffVPtEta_p[iter][centIter][qgIter];
+	delete jtEffVPtEta_Denom_p[iter][centIter][qgIter];
+	
+	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	  delete jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtEffVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	}
+	
+	delete jtRecoOverGenVEta_p[iter][centIter][qgIter];
+	delete jtRecoOverRawVEta_p[iter][centIter][qgIter];
+	delete jtRawOverGenVEta_p[iter][centIter][qgIter];
+	
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  delete jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter];
+	  delete jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter];
+	}
+	
+	delete jtEffVEta_p[iter][centIter][qgIter];
+	delete jtEffVEta_Mean_p[iter][centIter][qgIter];
+	delete jtFakeVEta_p[iter][centIter][qgIter];
+	delete jtFakeVEta_Mean_p[iter][centIter][qgIter];
+	
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  delete jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtEffVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	  delete jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	}
       }
     }
   }

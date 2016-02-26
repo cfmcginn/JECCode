@@ -16,20 +16,28 @@
 #include <iostream>
 #include <vector>
 
-const Int_t nJetAlgo = 4;
-const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF"};
+Bool_t plotTrue = false;
 
+const Int_t nJetAlgo = 5;
+const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF"};
 
 const Int_t nCentBins = 8;
 const std::string centStrings[nCentBins] = {"cent70to100", "cent50to70", "cent40to50", "cent30to40", "cent20to30", "cent10to20", "cent5to10", "cent0to5"};
 const std::string centStrings2[nCentBins] = {"70-100%", "50-70%", "40-50%", "30-40%", "20-30%", "10-20%", "5-10%", "0-5%"};
 
-const Int_t nHistName = 4;
-const std::string inHistName[nHistName] = {"RecoOverGen", "RecoOverRaw", "RawOverGen", "Eff"};
-const std::string xAxisLabel[nHistName] = {"Reco./Gen.", "Reco./Raw", "Raw/Gen.", "Eff."};
+const Int_t nHistName = 5;
+const std::string inHistName[nHistName] = {"RecoOverGen", "RecoOverRaw", "RawOverGen", "Eff", "Fake"};
+const std::string xAxisLabel[nHistName] = {"Reco./Gen.", "Reco./Raw", "Raw/Gen.", "Eff.", "Fake"};
 
 const Int_t nMeanRes = 2;
 const std::string meanResStr[nMeanRes] = {"Mean", "Res"};
+const std::string meanResStr2[nMeanRes] = {"#mu", "#sigma"};
+
+
+const Int_t nQG = 3;
+const std::string qgStr[nQG] = {"Inc", "Q", "G"};
+const std::string qgStr2[nQG] = {"Inc.", "Quarks", "Gluons"};
+const Int_t qgCol[nQG] = {kGray+1, kBlue, kRed};
 
 const Int_t nPtEta = 3;
 const std::string ptEtaStr[nPtEta] = {"VPt_", "VEta_", "VPtEta_"};
@@ -61,7 +69,7 @@ Float_t setMaxMinNice(Float_t inMaxMin, Bool_t isMax){
 }
 
 
-void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, const Int_t meanResNum, const Int_t ptEtaNum)
+void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, const Int_t meanResNum, const Int_t ptEtaNum, const Bool_t isPbPb)
 {
   TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
   const Int_t nContents = inFile_p->GetListOfKeys()->GetEntries();
@@ -89,9 +97,10 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	TString className2 = ((TKey*)tempDir_p->GetListOfKeys()->At(dirIter))->GetClassName();
 
 	if(className2.Index("TH1") >= 0){
-	  if(name2.Index(Form("_%s_", meanResStr[meanResNum].c_str())) >= 0){
-
+	  if(name2.Index(Form("%s_", meanResStr[meanResNum].c_str())) >= 0){
 	    if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
+	    if(!plotTrue && name2.Index(Form("Fit")) < 0) continue;
+
 
 	    if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
 	      nTH1Temp++;
@@ -109,10 +118,26 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   
   TCanvas* th1Canv_p[nDir];
 
-  for(Int_t iter = 0; iter < nDir; iter++){
-    th1Canv_p[iter] = new TCanvas(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), 4*300, 2*325);
-    th1Canv_p[iter]->Divide(4, 2, 0.0, 0.0);
+  Int_t nXPanel = 4;
+  Int_t nYPanel = 2;
+  if(!isPbPb){
+    nXPanel = 1;
+    nYPanel = 1;
   }
+
+  for(Int_t iter = 0; iter < nDir; iter++){
+    th1Canv_p[iter] = new TCanvas(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), nXPanel*300, nYPanel*325);
+    th1Canv_p[iter]->Divide(nXPanel, nYPanel, 0.0, 0.0);
+  }
+
+  Bool_t isDrawn[nDir][nXPanel*nYPanel];
+  for(Int_t iter = 0; iter < nDir; iter++){
+    for(Int_t iter2 = 0; iter2 < nXPanel*nYPanel; iter2++){
+      isDrawn[iter][iter2] = false;
+    }
+  }
+  
+  Bool_t legAdded[2][nQG] = {{false}, {false}};
 
   TLatex* label_p = new TLatex();
   label_p->SetNDC();
@@ -128,6 +153,24 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   }
 
   Float_t th1XMin = 30;
+
+  TLegend* meanLeg_p;
+  if(isPbPb) meanLeg_p = new TLegend(.50, .68, .90, .95);
+  else meanLeg_p = new TLegend(.50, .58, .90, .85);
+  meanLeg_p->SetBorderSize(0);
+  meanLeg_p->SetFillColor(0);
+  meanLeg_p->SetFillStyle(0);
+  meanLeg_p->SetTextFont(43);
+  meanLeg_p->SetTextSize(18);
+
+
+  TLegend* meanLeg2_p = new TLegend(.50, .68, .90, .95);
+  meanLeg2_p->SetBorderSize(0);
+  meanLeg2_p->SetFillColor(0);
+  meanLeg2_p->SetFillStyle(0);
+  meanLeg2_p->SetTextFont(43);
+  meanLeg2_p->SetTextSize(18);
+
 
   for(Int_t iter = 0; iter < nTH1; iter++){
     std::string th1Name = th1Names_p->at(iter);
@@ -151,20 +194,33 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
       }
     }
 
-    for(Int_t binIter = xMinBin-1; binIter < th1_p[iter]->GetNbinsX(); binIter++){
-      if(th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) > dirMax[dirPos] && th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) < 1.5) dirMax[dirPos] = th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1);
- 
+    Float_t dirMinBound = 0.5;
+    if(!strcmp("Fake", inHistName[inHistNum].c_str())) dirMinBound = 0.0;
+    else if(!strcmp("Res", meanResStr[meanResNum].c_str())) dirMinBound = 0.0;
 
-      if(th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) < dirMin[dirPos] && th1_p[iter]->GetBinContent(binIter+1) != 0 && th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) > 0.5) dirMin[dirPos] = th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1);
+    Float_t dirMaxBound = 1.3;
+
+    for(Int_t binIter = xMinBin-1; binIter < th1_p[iter]->GetNbinsX(); binIter++){
+      if(th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) > dirMax[dirPos] && th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) < dirMaxBound) dirMax[dirPos] = th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1);
+
+      if(th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) < dirMin[dirPos] && th1_p[iter]->GetBinContent(binIter+1) != 0 && th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1) > dirMinBound) dirMin[dirPos] = th1_p[iter]->GetBinContent(binIter+1) - th1_p[iter]->GetBinError(binIter+1);
     }
   }
 
+  Float_t dirMaxMin = 1.15;
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    if(!strcmp(inHistName[inHistNum].c_str(), "Eff")) dirMax[iter] = 1.1;
+    if(dirMax[iter] < dirMaxMin) dirMax[iter] = dirMaxMin;
 
-    dirMax[iter] = setMaxMinNice(dirMax[iter], true);
-    dirMin[iter] = setMaxMinNice(dirMin[iter], false);
+    if(!strcmp(inHistName[inHistNum].c_str(), "Eff")) dirMax[iter] = 1. + (1-dirMin[iter])/5;
+    else{
+      if(iter == 2 && !strcmp("Res", meanResStr[meanResNum].c_str())) std::cout << "max: " << dirMax[iter] << std::endl;
+
+      dirMax[iter] = setMaxMinNice(dirMax[iter], true);
+      dirMin[iter] = setMaxMinNice(dirMin[iter], false);
+
+      if(iter == 2 && !strcmp("Res", meanResStr[meanResNum].c_str())) std::cout << "max: " << dirMax[iter] << std::endl;
+    }
   }
 
   for(Int_t iter = 0; iter < nTH1; iter++){
@@ -180,13 +236,16 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     }
 
     Int_t centPos = -1;
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      std::size_t pos = th1Name.find(centStrings[centIter]);
-      if(pos != std::string::npos){
-        centPos = centIter;
-        break;
+    if(isPbPb){
+      for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+	std::size_t pos = th1Name.find(centStrings[centIter]);
+	if(pos != std::string::npos){
+	  centPos = centIter;
+	  break;
+	}
       }
     }
+    else centPos = 0;
 
     th1Canv_p[dirPos]->cd(centPos+1);
 
@@ -202,7 +261,35 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     
     if(!strcmp(ptEtaStr2[ptEtaNum].c_str(), "Pt")) gPad->SetLogx();
     
-    th1_p[iter]->DrawCopy("E1 P");
+    Int_t colPos = 0;
+    if(th1Name.find("_Q_") != std::string::npos) colPos = 1;
+    else if(th1Name.find("_G_") != std::string::npos) colPos = 2;
+
+    if(th1Name.find("Fit") != std::string::npos){
+      th1_p[iter]->SetMarkerColor(qgCol[colPos]);
+      th1_p[iter]->SetLineColor(qgCol[colPos]);
+      if(!legAdded[0][colPos]){
+	meanLeg_p->AddEntry(th1_p[iter], Form("Fit %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
+	legAdded[0][colPos] = true;
+      }
+    }
+    else{
+      th1_p[iter]->SetMarkerColor(qgCol[colPos]);
+      th1_p[iter]->SetMarkerStyle(24);
+      th1_p[iter]->SetLineColor(qgCol[colPos]);
+
+      if(!legAdded[1][colPos]){
+	if(isPbPb) meanLeg2_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
+	else meanLeg_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
+	legAdded[1][colPos] = true;
+      }
+    }
+
+    if(!isDrawn[dirPos][centPos]){
+      th1_p[iter]->DrawCopy("E1 P");
+      isDrawn[dirPos][centPos] = true;
+    }
+    else th1_p[iter]->DrawCopy("E1 P SAME");
     
     if(dirMin[dirPos] < 1 && dirMax[dirPos] > 1){
       TLine* oneLine_p = new TLine(th1XMin, 1, th1_p[iter]->GetXaxis()->GetXmax(), 1);
@@ -216,8 +303,15 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     if(centPos == 1) label_p->DrawLatex(.10, .9, Form("#bf{#color[2]{|#eta_{jet}|<2.0}}"));
     if(centPos == 2 && !strcmp(ptEtaStr2[ptEtaNum].c_str(), "Eta" )) label_p->DrawLatex(.10, .9, Form("#bf{#color[2]{Gen. p_{T}>30}}"));
 
-    if(centPos%4 == 0) label_p->DrawLatex(.68, .9, centStrings2[centPos].c_str());
-    else label_p->DrawLatex(.60, .9, centStrings2[centPos].c_str());
+    if(isPbPb){
+      if(centPos%4 == 0 && centPos < 4) label_p->DrawLatex(.28, .1, centStrings2[centPos].c_str());
+      else if(centPos%4 == 0 && centPos > 3) label_p->DrawLatex(.28, .25, centStrings2[centPos].c_str());
+      else if(centPos%4 != 0 && centPos < 4) label_p->DrawLatex(.08, .1, centStrings2[centPos].c_str());
+      else label_p->DrawLatex(.08, .25, centStrings2[centPos].c_str());
+    }
+    else{
+      if(centPos%4 == 0) label_p->DrawLatex(.78, .9, "PP");
+    }
   }
 
   std::string outName = inFileName;
@@ -234,12 +328,25 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
 
   for(Int_t iter = 0; iter < nDir; iter++){
+    if(!isPbPb) th1Canv_p[iter]->cd();
+    else th1Canv_p[iter]->cd(3);
+    meanLeg_p->Draw("SAME");
+
+    if(plotTrue){
+      if(!isPbPb) th1Canv_p[iter]->cd();
+      else th1Canv_p[iter]->cd(4);
+
+      if(isPbPb) meanLeg2_p->Draw("SAME");      
+    }
+
     th1Canv_p[iter]->Write("", TObject::kOverwrite);
     claverCanvasSaving(th1Canv_p[iter], Form("pdfDir/%s", th1Canv_p[iter]->GetName()), "pdf");
   }
 
   outFile_p->Close();
   delete outFile_p;
+
+  delete meanLeg_p;
 
   delete label_p;
 
@@ -261,7 +368,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 
 
 
-void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, const Int_t ptEtaNum)
+void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, const Int_t ptEtaNum, const Int_t qgNum, const Bool_t isPbPb)
 {
   TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
   const Int_t nContents = inFile_p->GetListOfKeys()->GetEntries();
@@ -295,6 +402,7 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
 
 	if(className2.Index("TH1") >= 0){
 	  if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
+	  if(name2.Index(Form("_%s_", qgStr[qgNum].c_str())) < 0) continue;
 
 	  if(name2.Index(Form("_%s", ptEtaStr2[ptEtaNum].c_str())) >= 0){
 	    if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
@@ -422,11 +530,15 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     }
   }
 
+  Int_t nCentBinsTemp = 1;
+  if(isPbPb) nCentBinsTemp = nCentBins;
+  const Int_t nCentBins2 = nCentBinsTemp;
+
   const Int_t nTH1 = nTH1Temp;
   const Int_t nDir = nDirTemp;
   const Int_t nPtBins = nPtBinsTemp;
   TH1F* th1_p[nTH1];
-  TCanvas* th1Canv_p[nDir][nCentBins];
+  TCanvas* th1Canv_p[nDir][nCentBins2];
 
   Int_t xBins = 0;
   Int_t yBins = 0;
@@ -452,8 +564,11 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
   }
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      th1Canv_p[iter][centIter] = new TCanvas(Form("%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStrings[centIter].c_str()), Form("%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStrings[centIter].c_str()), xBins*300, yBins*325);
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+      std::string centStr = centStrings[centIter];
+      if(!isPbPb) centStr = "PP";
+
+      th1Canv_p[iter][centIter] = new TCanvas(Form("%s_%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str()), Form("%s_%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str()), xBins*300, yBins*325);
       th1Canv_p[iter][centIter]->Divide(xBins, yBins, 0.0, 0.0);
     }
   }
@@ -463,11 +578,11 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
   label_p->SetTextFont(43);
   label_p->SetTextSizePixels(28);
 
-  Float_t dirMax[nDir][nCentBins];
-  Float_t dirMin[nDir][nCentBins];
+  Float_t dirMax[nDir][nCentBins2];
+  Float_t dirMin[nDir][nCentBins2];
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       dirMax[iter][centIter] = -1;
       dirMin[iter][centIter] = 100;
     }
@@ -488,13 +603,16 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     }
 
     Int_t centPos = -1;
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      std::size_t pos = th1Name.find(centStrings[centIter]);
-      if(pos != std::string::npos){
-        centPos = centIter;
-        break;
+    if(isPbPb){
+      for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+	std::size_t pos = th1Name.find(centStrings[centIter]);
+	if(pos != std::string::npos){
+	  centPos = centIter;
+	  break;
+	}
       }
     }
+    else centPos = 0;
 
 
 
@@ -507,7 +625,7 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
 
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       dirMax[iter][centIter] = setMaxMinNice(dirMax[iter][centIter], true);
       dirMin[iter][centIter] = setMaxMinNice(dirMin[iter][centIter], false);
     }
@@ -526,13 +644,16 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     }
 
     Int_t centPos = -1;
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
-      std::size_t pos = th1Name.find(centStrings[centIter]);
-      if(pos != std::string::npos){
-        centPos = centIter;
-        break;
+    if(isPbPb){
+      for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
+	std::size_t pos = th1Name.find(centStrings[centIter]);
+	if(pos != std::string::npos){
+	  centPos = centIter;
+	  break;
+	}
       }
     }
+    else centPos = 0;
 
     Int_t ptPos = -1;
     for(Int_t ptIter = 0; ptIter < (Int_t)ptBins_p->size(); ptIter++){
@@ -580,9 +701,14 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     if(ptPos%xBins == 0) label_p->DrawLatex(.30, .88, Form("%d.%d<%s<%d.%d", ptInts_p->at(ptPos), ptDec_p->at(ptPos), ptEtaStr3[ptEtaNum].c_str(), ptInts_p->at(ptPos+1), ptDec_p->at(ptPos+1)));
     else label_p->DrawLatex(.20, .88, Form("%d.%d<%s<%d.%d", ptInts_p->at(ptPos), ptDec_p->at(ptPos), ptEtaStr3[ptEtaNum].c_str(), ptInts_p->at(ptPos+1), ptDec_p->at(ptPos+1)));
 
-    if(ptPos == 0) label_p->DrawLatex(.30, .78, Form("#bf{#color[2]{%s (%s)}}", dirNames_p->at(dirPos).c_str(), centStrings2[centPos].c_str()));
+
+    if(ptPos == 0){
+      if(isPbPb) label_p->DrawLatex(.30, .78, Form("#bf{#color[2]{%s (%s)}}", dirNames_p->at(dirPos).c_str(), centStrings2[centPos].c_str()));
+      else label_p->DrawLatex(.30, .78, Form("#bf{#color[2]{%s (%s)}}", dirNames_p->at(dirPos).c_str(), "PP"));
+    }
     if(ptPos == 1) label_p->DrawLatex(.15, .78, Form("#bf{#color[2]{|#eta_{jet}|<2.0}}"));
     if(ptPos == 2 && !strcmp(ptEtaStr2[ptEtaNum].c_str(), "Eta" )) label_p->DrawLatex(.15, .78, Form("#bf{#color[2]{Gen. p_{T}>30}}"));
+    if(ptPos == 3) label_p->DrawLatex(.15, .78, Form("#bf{#color[2]{%s}}", qgStr2[qgNum].c_str()));
 
     //    if(centPos%xBins == 0) label_p->DrawLatex(.68, .9, centStrings2[centPos].c_str());
     //    else label_p->DrawLatex(.60, .9, centStrings2[centPos].c_str());
@@ -602,7 +728,7 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       th1Canv_p[iter][centIter]->Write("", TObject::kOverwrite);
       claverCanvasSaving(th1Canv_p[iter][centIter], Form("pdfDir/%s", th1Canv_p[iter][centIter]->GetName()), "pdf");
     }
@@ -619,7 +745,7 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
 
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+    for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       delete th1Canv_p[iter][centIter];
     }
   }
@@ -637,7 +763,7 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
 }
 
 
-void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, const Int_t ptEtaNum)
+void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, const Int_t ptEtaNum, const Int_t qgNum, const Bool_t isPbPb)
 {
   TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
   const Int_t nContents = inFile_p->GetListOfKeys()->GetEntries();
@@ -665,6 +791,8 @@ void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, con
 
         if(className2.Index("TH2") >= 0){
 	  if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
+	  if(name2.Index(Form("_%s_", qgStr[qgNum].c_str())) < 0) continue;
+
           if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
             nTH2Temp++;
             th2Names_p->push_back(Form("%s/%s", name.Data(), name2.Data()));
@@ -711,19 +839,28 @@ void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, con
 
     th2_p[iter]->DrawCopy("COLZ");
 
-    pos = th2Name.find("cent");
-    if(pos != std::string::npos){
-      std::string centStr = th2Name.substr(pos);
-      pos = centStr.find("_");
-      if(pos != std::string::npos) centStr = centStr.substr(4, pos-4);
-
-      pos = centStr.find("to");
-
+    if(isPbPb){
+      pos = th2Name.find("cent");
       if(pos != std::string::npos){
-	if(strcmp(ptEtaStr2[ptEtaNum].c_str(), "PtEta") != 0) label_p->DrawLatex(.65, .85, Form("#bf{#color[2]{%s-%s%%}}", centStr.substr(0, pos).c_str(), centStr.substr(pos+2).c_str()));
-	else label_p->DrawLatex(.65, .85, Form("#bf{%s-%s%%}", centStr.substr(0, pos).c_str(), centStr.substr(pos+2).c_str()));
+	std::string centStr = th2Name.substr(pos);
+	pos = centStr.find("_");
+	if(pos != std::string::npos) centStr = centStr.substr(4, pos-4);
+	
+	pos = centStr.find("to");
+	
+	if(pos != std::string::npos){
+	  if(strcmp(ptEtaStr2[ptEtaNum].c_str(), "PtEta") != 0) label_p->DrawLatex(.65, .85, Form("#bf{#color[2]{%s-%s%%}}", centStr.substr(0, pos).c_str(), centStr.substr(pos+2).c_str()));
+	  else label_p->DrawLatex(.65, .85, Form("#bf{%s-%s%%}", centStr.substr(0, pos).c_str(), centStr.substr(pos+2).c_str()));
+	}
       }
+      label_p->DrawLatex(.65, .75, qgStr2[qgNum].c_str());
     }
+    else{
+      if(strcmp(ptEtaStr2[ptEtaNum].c_str(), "PtEta") != 0) label_p->DrawLatex(.65, .85, Form("#bf{#color[2]{PP}}"));
+      else label_p->DrawLatex(.65, .85, Form("#bf{PP}"));
+
+      label_p->DrawLatex(.65, .75, qgStr2[qgNum].c_str());
+    }      
 
     pos = th2Name.find("ak");
     if(pos != std::string::npos){
@@ -779,18 +916,20 @@ void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, con
 
 
 
-void makeJECPlot(const std::string inFileName)
+void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
 {
   for(Int_t iter = 0; iter < nHistName; iter++){
     for(Int_t ptEtaIter = 0; ptEtaIter < nPtEta; ptEtaIter++){
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
-	if(!strcmp(inHistName[iter].c_str(), "Eff") && !strcmp(meanResStr[iter2].c_str(), "Res")) continue;
+	if((!strcmp(inHistName[iter].c_str(), "Eff") || !strcmp(inHistName[iter].c_str(), "Fake")) && !strcmp(meanResStr[iter2].c_str(), "Res")) continue;
 
-	if(ptEtaIter < 2) makeJECPlotMeanRes(inFileName, iter, iter2, ptEtaIter);
+	if(ptEtaIter < 2) makeJECPlotMeanRes(inFileName, iter, iter2, ptEtaIter, isPbPb);
       }
 
-      if(ptEtaIter < 2) makeJECPlotMeanPts(inFileName, iter, ptEtaIter);
-      makeJECPlotScatter(inFileName, iter, ptEtaIter);
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	if(ptEtaIter < 2) makeJECPlotMeanPts(inFileName, iter, ptEtaIter, qgIter, isPbPb);
+	makeJECPlotScatter(inFileName, iter, ptEtaIter, qgIter, isPbPb);
+      }
     }
   }
 
