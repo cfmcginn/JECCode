@@ -18,15 +18,16 @@
 
 Bool_t plotTrue = false;
 
-const Int_t nJetAlgo = 5;
-const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF"};
+const Int_t nJetAlgo = 6;
+const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
+//const std::string jetAlgo[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
 
 const Int_t nCentBins = 8;
 const std::string centStrings[nCentBins] = {"cent70to100", "cent50to70", "cent40to50", "cent30to40", "cent20to30", "cent10to20", "cent5to10", "cent0to5"};
 const std::string centStrings2[nCentBins] = {"70-100%", "50-70%", "40-50%", "30-40%", "20-30%", "10-20%", "5-10%", "0-5%"};
 
 const Int_t nHistName = 5;
-const std::string inHistName[nHistName] = {"RecoOverGen", "RecoOverRaw", "RawOverGen", "Eff", "Fake"};
+const std::string inHistName[nHistName+2] = {"RecoOverGen", "RecoOverRaw", "RawOverGen", "Eff", "Fake", "RecoGenDR", "RecoVGen"};
 const std::string xAxisLabel[nHistName] = {"Reco./Gen.", "Reco./Raw", "Raw/Gen.", "Eff.", "Fake"};
 
 const Int_t nMeanRes = 2;
@@ -99,8 +100,10 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	if(className2.Index("TH1") >= 0){
 	  if(name2.Index(Form("%s_", meanResStr[meanResNum].c_str())) >= 0){
 	    if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
-	    if(!plotTrue && name2.Index(Form("Fit")) < 0) continue;
+	    if(!plotTrue && name2.Index(Form("Fit")) < 0 && strcmp("Eff", inHistName[inHistNum].c_str()) != 0 && strcmp("Fake", inHistName[inHistNum].c_str()) != 0) continue;
 
+
+	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 
 	    if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
 	      nTH1Temp++;
@@ -183,6 +186,8 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 
     if(iter == 0) th1XMin = th1_p[iter]->GetBinLowEdge(xMinBin);
 
+    //insert new xmin
+    th1XMin = th1_p[iter]->GetXaxis()->GetXmin();
     th1_p[iter]->SetAxisRange(th1XMin, th1_p[iter]->GetXaxis()->GetXmax(), "X");
 
     Int_t dirPos = -1;
@@ -198,7 +203,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     if(!strcmp("Fake", inHistName[inHistNum].c_str())) dirMinBound = 0.0;
     else if(!strcmp("Res", meanResStr[meanResNum].c_str())) dirMinBound = 0.0;
 
-    Float_t dirMaxBound = 1.3;
+    Float_t dirMaxBound = 1.5;
 
     for(Int_t binIter = xMinBin-1; binIter < th1_p[iter]->GetNbinsX(); binIter++){
       if(th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) > dirMax[dirPos] && th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1) < dirMaxBound) dirMax[dirPos] = th1_p[iter]->GetBinContent(binIter+1) + th1_p[iter]->GetBinError(binIter+1);
@@ -296,6 +301,18 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
       oneLine_p->SetLineStyle(2);
       oneLine_p->DrawClone();
       delete oneLine_p;
+
+      if(!strcmp(inHistName[inHistNum].c_str(), "RecoOverGen")){
+	TLine* oneLineUp_p = new TLine(th1XMin, 1.05, th1_p[iter]->GetXaxis()->GetXmax(), 1.05);
+	oneLineUp_p->SetLineStyle(2);
+	oneLineUp_p->DrawClone();
+	delete oneLineUp_p;
+
+	TLine* oneLineDown_p = new TLine(th1XMin, .95, th1_p[iter]->GetXaxis()->GetXmax(), .95);
+	oneLineDown_p->SetLineStyle(2);
+	oneLineDown_p->DrawClone();
+	delete oneLineDown_p;
+      }
     }    
 
     if(centPos == 0) label_p->DrawLatex(.30, .9, Form("#bf{#color[2]{%s}}", dirNames_p->at(dirPos).c_str()));
@@ -790,7 +807,7 @@ void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, con
         TString className2 = ((TKey*)tempDir_p->GetListOfKeys()->At(dirIter))->GetClassName();
 
         if(className2.Index("TH2") >= 0){
-	  if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
+	  if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0 && name2.Index("RecoVGen") < 0) continue;
 	  if(name2.Index(Form("_%s_", qgStr[qgNum].c_str())) < 0) continue;
 
           if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
@@ -919,6 +936,8 @@ void makeJECPlotScatter(const std::string inFileName, const Int_t inHistNum, con
 void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
 {
   for(Int_t iter = 0; iter < nHistName; iter++){
+    //    if(strcmp(inHistName[iter].c_str(), "Eff") != 0) continue;
+
     for(Int_t ptEtaIter = 0; ptEtaIter < nPtEta; ptEtaIter++){
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
 	if((!strcmp(inHistName[iter].c_str(), "Eff") || !strcmp(inHistName[iter].c_str(), "Fake")) && !strcmp(meanResStr[iter2].c_str(), "Res")) continue;
@@ -927,11 +946,19 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
       }
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	if(!strcmp(inHistName[iter].c_str(), "Fake") && qgIter > 0) continue;
+
 	if(ptEtaIter < 2) makeJECPlotMeanPts(inFileName, iter, ptEtaIter, qgIter, isPbPb);
 	makeJECPlotScatter(inFileName, iter, ptEtaIter, qgIter, isPbPb);
       }
     }
   }
+
+  for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+    makeJECPlotScatter(inFileName, nHistName, 0, qgIter, isPbPb);
+    makeJECPlotScatter(inFileName, nHistName+1, 0, qgIter, isPbPb);
+  }
+
 
   return;
 }
