@@ -484,11 +484,13 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   }
 
   const Int_t numberOfFiles = (Int_t)listOfFiles_p->size();
+  Int_t fileDiv = ((Int_t)(numberOfFiles/10));
+  if(fileDiv < 1) fileDiv = 1;
 
-  std::cout << "Number of files: " << numberOfFiles << std::endl;
+  //  std::cout << "Number of files: " << numberOfFiles << std::endl;
 
   for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
-    if(fileIter%10 == 0) std::cout << "File #: " << fileIter << std::endl;
+    if(fileIter%fileDiv == 0) std::cout << "File # " << fileIter << "/" << numberOfFiles << std::endl;
 
     TFile* inFile_p = new TFile(listOfFiles_p->at(fileIter).c_str(), "READ");
 
@@ -569,9 +571,10 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     }
 
     const Int_t nEntries = jetTree_p[0]->GetEntries();
+    Int_t entryDiv = ((Int_t)(nEntries/10));
 
     for(Int_t entry = 0; entry < nEntries; entry++){
-      if(entry%10000 == 0) std::cout << "Entry # " << entry << "/" << nEntries << std::endl;
+      if(entry%entryDiv == 0 && nEntries >= 10000) std::cout << "Entry # " << entry << "/" << nEntries << std::endl;
       hiTree_p->GetEntry(entry);
       genTree_p->GetEntry(entry);
 
