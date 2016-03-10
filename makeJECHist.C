@@ -211,8 +211,21 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   const std::string outString = Form("_%d_HIST.root", date->GetDate());
   std::size_t strIndex = 0;
 
+  std::string tempOutName = outName;
+  Int_t outNum = 0;
+  Int_t outIter = 0;
+
+  while(tempOutName.find("/") != std::string::npos){
+    outNum++;
+    tempOutName.replace(0, tempOutName.find("/")+1, "");
+  }
+
   while(outName.find("/") != std::string::npos){
-    outName.replace(0, outName.find("/")+1, "");
+    if(outIter < outNum-2){
+      outIter++;
+      outName.replace(0, outName.find("/")+1, "");
+    }
+    else outName.replace(outName.find("/"), 1, "_");
   }
 
   strIndex = outName.find(inString);
@@ -487,12 +500,16 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   Int_t fileDiv = ((Int_t)(numberOfFiles/10));
   if(fileDiv < 1) fileDiv = 1;
 
+  fileDiv = 1;
+
   //  std::cout << "Number of files: " << numberOfFiles << std::endl;
 
   for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
     if(fileIter%fileDiv == 0) std::cout << "File # " << fileIter << "/" << numberOfFiles << std::endl;
 
     TFile* inFile_p = new TFile(listOfFiles_p->at(fileIter).c_str(), "READ");
+
+    //    std::cout << listOfFiles_p->at(fileIter).c_str() << std::endl;
 
     TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
     TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
@@ -524,6 +541,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     genTree_p->SetBranchAddress("eta", &genEta_p);
     genTree_p->SetBranchAddress("pdg", &genPDG_p);
     
+
+    //    std::cout << "Gets Here A" << std::endl;
 
     for(Int_t iter = 0; iter < nJetAlgo; iter++){
       jetTree_p[iter]->SetBranchStatus("*", 0);
@@ -570,11 +589,18 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       jetTree_p[iter]->SetBranchAddress("gensubid", genSubId_[iter]);
     }
 
+
+    //    std::cout << "Gets Here B" << std::endl;
     const Int_t nEntries = jetTree_p[0]->GetEntries();
     Int_t entryDiv = ((Int_t)(nEntries/10));
 
+    //    std::cout << "Gets Here C" << std::endl;
+
     for(Int_t entry = 0; entry < nEntries; entry++){
+      //      std::cout << "Gets here d" << std::endl;
+
       if(entry%entryDiv == 0 && nEntries >= 10000) std::cout << "Entry # " << entry << "/" << nEntries << std::endl;
+      //      std::cout << "Gets here e" << std::endl;
       hiTree_p->GetEntry(entry);
       genTree_p->GetEntry(entry);
 
@@ -626,6 +652,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       for(Int_t iter = 0; iter < nJetAlgo; iter++){
 	jetTree_p[iter]->GetEntry(entry);
       }
+
+      //      std::cout << "ALPHA" << std::endl;
       
       Bool_t skipEvent = false;
       
@@ -684,6 +712,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	    }
 	  }
 	}
+
+	//	std::cout << "ALPHA2" << std::endl;
 
 	genSort(nGenJt_[algoIter], genJtPt_[algoIter], genJtPhi_[algoIter], genJtEta_[algoIter]);
 
