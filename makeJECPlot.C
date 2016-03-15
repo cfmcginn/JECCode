@@ -16,10 +16,11 @@
 #include <iostream>
 #include <vector>
 
-Bool_t plotTrue = false;
+Bool_t plotTrue = true;
 
-const Int_t nJetAlgo = 6;
-const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
+const Int_t nJetAlgo = 1;
+const std::string jetAlgo[nJetAlgo] = {"akCs4PF"};
+//const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
 //const std::string jetAlgo[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
 
 const Int_t nCentBins = 4;
@@ -43,6 +44,10 @@ const Int_t nQG = 3;
 const std::string qgStr[nQG] = {"Inc", "Q", "G"};
 const std::string qgStr2[nQG] = {"Inc.", "Quarks", "Gluons"};
 const Int_t qgCol[nQG] = {kGray+1, kBlue, kRed};
+
+const Int_t nPtCut = 4;
+const std::string ptCutStr[nPtCut] = {"(p_{T}^{reco} > 5)", "(p_{T}^{reco} > 10)", "(p_{T}^{reco} > 15)", "(p_{T}^{reco} > 20)"};
+const Int_t ptCutCol[nPtCut] = {kGray+1, kBlue, kRed, kYellow+1};
 
 const Int_t nPtEta = 3;
 const std::string ptEtaStr[nPtEta] = {"VPt_", "VEta_", "VPtEta_"};
@@ -108,6 +113,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 
 
 	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
+	    if(!strcmp("Eff", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 
 	    if(name2.Index(inHistName[inHistNum].c_str()) >= 0){
 	      nTH1Temp++;
@@ -279,27 +285,53 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     th1_p[iter]->GetYaxis()->SetNdivisions(505);    
 
     if(!strcmp(ptEtaStr2[ptEtaNum].c_str(), "Pt")) gPad->SetLogx();
+
+    std::string legString;
     
     Int_t colPos = 0;
-    if(th1Name.find("_Q_") != std::string::npos) colPos = 1;
-    else if(th1Name.find("_G_") != std::string::npos) colPos = 2;
-
+    if(strcmp("Eff", inHistName[inHistNum].c_str()) != 0){
+      if(th1Name.find("_Q_") != std::string::npos){
+	colPos = 1;
+	legString = qgStr2[1];
+      }
+      else if(th1Name.find("_G_") != std::string::npos){
+	colPos = 2;
+	legString = qgStr2[2];
+      }
+      else legString = qgStr2[0];
+    }
+    else{
+      if(th1Name.find("Reco10") != std::string::npos){
+	colPos = 1;
+	legString = ptCutStr[1];
+      }
+      else if(th1Name.find("Reco15") != std::string::npos){
+	colPos = 2;
+	legString = ptCutStr[2];
+      }
+      else if(th1Name.find("Reco20") != std::string::npos){
+	colPos = 3;
+	legString = ptCutStr[3];
+      }
+      else legString = ptCutStr[0];
+    }
+    
     if(th1Name.find("Fit") != std::string::npos){
-      th1_p[iter]->SetMarkerColor(qgCol[colPos]);
-      th1_p[iter]->SetLineColor(qgCol[colPos]);
+      th1_p[iter]->SetMarkerColor(ptCutCol[colPos]);
+      th1_p[iter]->SetLineColor(ptCutCol[colPos]);
       if(!legAdded[0][colPos]){
-	meanLeg_p->AddEntry(th1_p[iter], Form("Fit %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
+	meanLeg_p->AddEntry(th1_p[iter], Form("Fit %s %s", meanResStr2[meanResNum].c_str(), legString.c_str()), "P L");
 	legAdded[0][colPos] = true;
       }
     }
     else{
-      th1_p[iter]->SetMarkerColor(qgCol[colPos]);
+      th1_p[iter]->SetMarkerColor(ptCutCol[colPos]);
       th1_p[iter]->SetMarkerStyle(24);
-      th1_p[iter]->SetLineColor(qgCol[colPos]);
+      th1_p[iter]->SetLineColor(ptCutCol[colPos]);
 
       if(!legAdded[1][colPos]){
-	if(isPbPb) meanLeg2_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
-	else meanLeg_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), qgStr2[colPos].c_str()), "P L");
+	if(isPbPb) meanLeg2_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), legString.c_str()), "P L");
+	else meanLeg_p->AddEntry(th1_p[iter], Form("True %s %s", meanResStr2[meanResNum].c_str(), legString.c_str()), "P L");
 	legAdded[1][colPos] = true;
       }
     }
@@ -1601,12 +1633,13 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
 	if((!strcmp(inHistName[iter].c_str(), "Eff") || !strcmp(inHistName[iter].c_str(), "Fake")) && !strcmp(meanResStr[iter2].c_str(), "Res")) continue;
 
 	if(ptEtaIter < 2) makeJECPlotMeanRes(inFileName, iter, iter2, ptEtaIter, isPbPb);
-      }
+     }
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	if(!strcmp(inHistName[iter].c_str(), "Fake") && qgIter > 0) continue;
 
-	if(ptEtaIter < 2) makeJECPlotMeanPts(inFileName, iter, ptEtaIter, qgIter, isPbPb);
+	if(ptEtaIter < 2 && iter != 3) makeJECPlotMeanPts(inFileName, iter, ptEtaIter, qgIter, isPbPb);
+
 	makeJECPlotScatter(inFileName, iter, ptEtaIter, qgIter, isPbPb);
       }
     }
@@ -1622,18 +1655,18 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
   }
 
 
-  /*
+  
   for(Int_t iter = 0; iter < nJetAlgo-1; iter++){
     for(Int_t iter2 = iter+1; iter2 < nJetAlgo; iter2++){
       
       std::cout << "iters: " << iter << ", " << iter2 << std::endl;
 
       for(Int_t ptEtaIter = 0; ptEtaIter < nPtEta-1; ptEtaIter++){
-	makeJECPlotMeanRes_Comp(inFileName, iter, iter2, 3, 0, ptEtaIter, isPbPb);
+	//	makeJECPlotMeanRes_Comp(inFileName, iter, iter2, 3, 0, ptEtaIter, isPbPb);
 	makeJECPlotMeanRes_Comp(inFileName, iter, iter2, 0, 0, ptEtaIter, isPbPb);
       }
     }
   }
-  */
+  
   return;
 }
