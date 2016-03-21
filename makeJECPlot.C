@@ -16,7 +16,7 @@
 #include <iostream>
 #include <vector>
 
-Bool_t plotTrue = true;
+Bool_t plotTrue = false;
 
 const Int_t nJetAlgo = 1;
 const std::string jetAlgo[nJetAlgo] = {"akCs4PF"};
@@ -111,6 +111,9 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	    if(name2.Index(ptEtaStr[ptEtaNum].c_str()) < 0) continue;
 	    if(!plotTrue && name2.Index(Form("Fit")) < 0 && strcmp("Eff", inHistName[inHistNum].c_str()) != 0 && strcmp("Fake", inHistName[inHistNum].c_str()) != 0) continue;
 
+
+	    if(name2.Index("_Q_") >= 0) continue;
+	    if(name2.Index("_G_") >= 0) continue;
 
 	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 	    if(!strcmp("Eff", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;

@@ -348,6 +348,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   TH1F* areaEstimate_p[nJetAlgo][nCentBins2];
   TH2F* bkgAreaEstimate_p[nJetAlgo][nCentBins2];
 
+  TH1F* jtEta_p[nJetAlgo][nCentBins2][nQG];
+
   TH2F* jtRecoGenDRVPt_p[nJetAlgo][nCentBins2][nQG];
   TH2F* jtRecoVGen_p[nJetAlgo][nCentBins2][nQG];
   TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins2][nQG];
@@ -457,6 +459,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       bkgAreaEstimate_p[iter][centIter] = new TH2F(Form("bkgAreaEstimate_%s_%s_h", jetAlgo[iter].c_str(), centStr.c_str()), Form(";Area;Bkg."), 20, 0, 4*2*TMath::Pi(), 20, 0, 50);
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	jtEta_p[iter][centIter][qgIter] = new TH1F(Form("jtEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";#eta;Events (%s)", jetAlgo[iter].c_str()), 100, -3., 3.);
+
 	jtRecoGenDRVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoGenDRVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #DeltaR_{Reco. %s, Gen.}", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 20, 0, 0.4);
 
 	jtRecoVGen_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoVGen_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; Reco. %s Jet p_{T}", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, nJtPtBins, jtPtBins);
@@ -591,6 +595,13 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     if(fileIter%fileDiv == 0) std::cout << "File # " << fileIter << "/" << numberOfFiles << std::endl;
 
     TFile* inFile_p = new TFile(listOfFiles_p->at(fileIter).c_str(), "READ");
+
+
+    if(inFile_p == NULL) continue;
+    if(inFile_p->GetSize() < 1000){
+      std::cout << "File " << listOfFiles_p->at(fileIter) << " less than 1 kb. Continue" << std::endl;
+      continue;
+    }
 
     //    std::cout << listOfFiles_p->at(fileIter).c_str() << std::endl;
 
@@ -858,10 +869,10 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	  //	  if(genJtPt_[algoIter][jtIter] < 5.0) break;
 	  //	  if(genSubId_[algoIter][jtIter] != 0) continue;
 
-	  //	  if(TMath::Abs(refEta_[algoIter][jtIter]) > 2.0) continue;
-	  if(TMath::Abs(jtEta_[algoIter][jtIter]) > 2.0) continue;
-	  if(refPt_[algoIter][jtIter] < 10.0) continue;
-	  //	  if(refPt_[algoIter][jtIter] < 5.0) continue;
+	  if(TMath::Abs(refEta_[algoIter][jtIter]) > 2.0) continue;
+	  //if(TMath::Abs(jtEta_[algoIter][jtIter]) > 2.0) continue;
+	  //if(refPt_[algoIter][jtIter] < 10.0) continue;
+	  if(refPt_[algoIter][jtIter] < 5.0) continue;
 	  if(refSubID_[algoIter][jtIter] != 0) continue;
 
 	  /*
@@ -910,6 +921,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	    if(qgPos[qgIter] == -1) continue;
 	    
 	    if(true/*recoPosJet[jtIter] != -1*/){
+	      jtEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtEta_[algoIter][jtIter]);
+
 	      jtRecoVGen_p[algoIter][centPos][qgPos[qgIter]]->Fill(/*genJtPt_*/refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter/*recoPosJet[jtIter]*/]);
 
 	      jtRecoGenDRVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(/*genJtPt_*/refPt_[algoIter][jtIter], getDR(jtEta_[algoIter][jtIter/*recoPosJet[jtIter]*/], jtPhi_[algoIter][jtIter/*recoPosJet[jtIter]*/], /*genJtEta_*/refEta_[algoIter][jtIter], /*genJtPhi_*/refPhi_[algoIter][jtIter]));
@@ -1236,6 +1249,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       bkgAreaEstimate_p[iter][centIter]->Write("", TObject::kOverwrite);
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	jtEta_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
+
 	jtRecoVGen_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 	jtRecoGenDRVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 	jtRecoOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
@@ -1333,6 +1348,8 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       delete bkgAreaEstimate_p[iter][centIter];
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	delete jtEta_p[iter][centIter][qgIter];
+
 	delete jtRecoVGen_p[iter][centIter][qgIter];
 	delete jtRecoGenDRVPt_p[iter][centIter][qgIter];
 	delete jtRecoOverGenVPt_p[iter][centIter][qgIter];
