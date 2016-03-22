@@ -18,17 +18,18 @@
 #include "getBkgEstimate.h"
 
 #include "dirent.h"
+#include "sys/stat.h"
 
 const Bool_t doGetBkg = false;
 
 //const Int_t nJetAlgo = 6;
 //const std::string jetAlgoTemp[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
-const Int_t nJetAlgo = 3;
-const std::string jetAlgoTemp[nJetAlgo] = {"akCs4PF", "akCs3PF", "akPu3PF"};
+const Int_t nJetAlgo = 2;
+const std::string jetAlgoTemp[nJetAlgo] = {"akPu3PF", "akVs3PF"};
 //const std::string jetAlgoTemp[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
 //const Int_t jetAlgoR[nJetAlgo] = {4, 3, 4, 3};
 //const Int_t jetAlgoR[nJetAlgo] = {4, 4, 4, 4, 3, 3};
-const Int_t jetAlgoR[nJetAlgo] = {4, 3, 3};
+const Int_t jetAlgoR[nJetAlgo] = {3, 3};
 
 const Int_t nJtCat = 3;
 const std::string jtCat[nJtCat] = {"Eta2", "Eta1", "Dijet"};
@@ -49,8 +50,17 @@ const Float_t centBins2[nCentBins+1] = {0.001, 10, 30, 50, 99.999};
 
 const Int_t nMaxGen = 100000;
 
-const Int_t nJetRecoCuts = 4;
-const Int_t jetRecoCuts[nJetRecoCuts] = {5, 10, 15, 20};
+const Int_t nJetRecoCuts = 5;
+const Int_t jetRecoCuts[nJetRecoCuts] = {5, 10, 15, 20, 25};
+
+
+int isDirectory(const char *path) {
+  struct stat statbuf;
+  if (stat(path, &statbuf) != 0)
+    return 0;
+  return S_ISDIR(statbuf.st_mode);
+}
+
 
 Bool_t isGoodCaloJet(TString algo, Float_t hcalSum, Float_t ecalSum)
 {
@@ -198,14 +208,36 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   DIR *dpdf;
   struct dirent *epdf;
 
+  
   if(!strcmp(&(inFileName.back()), "/")){
     dpdf = opendir(inFileName.c_str());
     
     if(dpdf != NULL){
+ 
       while(epdf = readdir(dpdf)){
 	TString temp = epdf->d_name;
-	
-	if(temp.Index("HiForest") >= 0) listOfFiles_p->push_back(Form("%s%s", inFileName.c_str(), temp.Data()));
+
+	if(isDirectory(Form("%s/%s", inFileName.c_str(), temp.Data()))){
+
+	  if(!strcmp(".", temp.Data())) continue;
+	  if(!strcmp("..", temp.Data())) continue;
+
+	  DIR *dpdf2;
+	  struct dirent *epdf2;
+
+	  dpdf2 = opendir(Form("%s/%s", inFileName.c_str(), temp.Data()));
+	  
+	  if(dpdf2 != NULL){
+	    while(epdf2 = readdir(dpdf2)){
+	      TString temp2 = epdf2->d_name;
+	      
+	      if(temp2.Index("HiForest") >= 0) listOfFiles_p->push_back(Form("%s/%s/%s", inFileName.c_str(), temp.Data(), temp2.Data()));
+	      
+	    }
+	  }
+
+	}
+	else if(temp.Index("HiForest") >= 0) listOfFiles_p->push_back(Form("%s%s", inFileName.c_str(), temp.Data()));
       }
     }
     else{
@@ -214,6 +246,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     }
   }
   else listOfFiles_p->push_back(inFileName);
+
 
   std::string outName = listOfFiles_p->at(0).c_str();
   const std::string inString = ".root";
@@ -227,12 +260,12 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   Int_t outIter = 0;
 
   while(tempOutName.find("/") != std::string::npos){
-    outNum++;
     tempOutName.replace(0, tempOutName.find("/")+1, "");
+    if(tempOutName.size() > 40) outNum++;
   }
 
   while(outName.find("/") != std::string::npos){
-    if(outIter < outNum-2){
+    if(outIter < outNum){
       outIter++;
       outName.replace(0, outName.find("/")+1, "");
     }
@@ -407,6 +440,14 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 
   Int_t nNoLeadEle = 0;
   Int_t nNoSubleadEle = 0;
+
+  Int_t etaFills[nJetAlgo][nCentBins2];
+
+  for(Int_t iter = 0; iter < nJetAlgo; iter++){
+    for(Int_t iter2 = 0; iter2 < nCentBins2; iter2++){
+      etaFills[iter][iter2] = 0;
+    }
+  }
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
 
@@ -587,7 +628,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   Int_t fileDiv = ((Int_t)(numberOfFiles/10));
   if(fileDiv < 1) fileDiv = 1;
 
-  fileDiv = 1;
+  //  fileDiv = 1;
 
   //  std::cout << "Number of files: " << numberOfFiles << std::endl;
 
@@ -602,11 +643,15 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       std::cout << "File " << listOfFiles_p->at(fileIter) << " less than 1 kb. Continue" << std::endl;
       continue;
     }
+    else if(inFile_p->IsZombie()){
+      std::cout << "File " << listOfFiles_p->at(fileIter) << " is zombie. Continue" << std::endl;
+      continue;
+    }
 
     //    std::cout << listOfFiles_p->at(fileIter).c_str() << std::endl;
 
     TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-    TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+    //    TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
     TTree* jetTree_p[nJetAlgo];
 
     for(Int_t iter = 0; iter < nJetAlgo; iter++){
@@ -623,7 +668,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     hiTree_p->SetBranchAddress("vz", &vz_);
     hiTree_p->SetBranchAddress("run", &run_);
     hiTree_p->SetBranchAddress("evt", &evt_);
-    
+    /*
     genTree_p->SetBranchStatus("*", 0);
     genTree_p->SetBranchStatus("pt", 1);
     genTree_p->SetBranchStatus("phi", 1);
@@ -634,7 +679,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
     genTree_p->SetBranchAddress("phi", &genPhi_p);
     genTree_p->SetBranchAddress("eta", &genEta_p);
     genTree_p->SetBranchAddress("pdg", &genPDG_p);
-    
+    */    
 
     //    std::cout << "Gets Here A" << std::endl;
 
@@ -698,7 +743,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
       if(entry%entryDiv == 0 && nEntries >= 10000) std::cout << "Entry # " << entry << "/" << nEntries << std::endl;
       //      std::cout << "Gets here e" << std::endl;
       hiTree_p->GetEntry(entry);
-      genTree_p->GetEntry(entry);
+      //      genTree_p->GetEntry(entry);
 
       Int_t centPos = -1;
 
@@ -820,7 +865,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	
 	std::vector<Bool_t>* isBkg_p = new std::vector<Bool_t>;
 	
-	if(doGetBkg) getBkgEstimate(jetAlgoR[algoIter], genPt_p, genPhi_p, genEta_p, nGenJt_[algoIter], genJtPt_[algoIter], genJtPhi_[algoIter], genJtEta_[algoIter], evtBkg, evtArea, isBkg_p);
+	//	if(doGetBkg) getBkgEstimate(jetAlgoR[algoIter], genPt_p, genPhi_p, genEta_p, nGenJt_[algoIter], genJtPt_[algoIter], genJtPhi_[algoIter], genJtEta_[algoIter], evtBkg, evtArea, isBkg_p);
 
 	if(evtBkg != 0){
 	  bkgEstimate_p[algoIter][centPos]->Fill(evtBkg);
@@ -834,7 +879,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	    const Int_t bkgNum = ((Int_t)(isBkg_p->size()));
 	    
 	    for(Int_t bkgIter = 0; bkgIter < bkgNum; bkgIter++){
-	      if(isBkg_p->at(bkgIter)) std::cout << "  particle pt, phi, eta: " << genPt_p->at(bkgIter) << ", " << genPhi_p->at(bkgIter) << ", " << genEta_p->at(bkgIter) << std::endl;
+	      //	      if(isBkg_p->at(bkgIter)) std::cout << "  particle pt, phi, eta: " << genPt_p->at(bkgIter) << ", " << genPhi_p->at(bkgIter) << ", " << genEta_p->at(bkgIter) << std::endl;
 	      //	    else std::cout << "skipping: " <<  genPt_p->at(bkgIter) << ", " << genPhi_p->at(bkgIter) << ", " << genEta_p->at(bkgIter) << std::endl;
 	    }
 	  }
@@ -980,6 +1025,9 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	    //EDITING HERE
 	    if(/*genJtPt_*/refPt_[algoIter][jtIter] > 30){
 	      if(true/*recoPosJet[jtIter] != -1*/){
+
+		if(qgIter == 0) etaFills[algoIter][centPos]++;
+
 		jtRecoOverGenVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(/*genJtEta_*/refEta_[algoIter][jtIter], jtPt_[algoIter][jtIter/*recoPosJet[jtIter]*/]/*genJtPt_*//refPt_[algoIter][jtIter]);
 		jtRawOverGenVEta_p[algoIter][centPos][qgPos[qgIter]]->Fill(/*genJtEta_*/refEta_[algoIter][jtIter], jtRawPt_[algoIter][jtIter/*recoPosJet[jtIter]*/]/*genJtPt_*//refPt_[algoIter][jtIter]);
 	      }	    
@@ -1059,6 +1107,12 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
   }
 
   myfile.close();
+
+  for(Int_t iter = 0; iter < nJetAlgo; iter++){
+    for(Int_t iter2 = 0; iter2 < nCentBins2; iter2++){
+      std::cout << "Fills for " << jetAlgo[iter] << ", centrality " << centBins[iter2] << "-" << centBins[iter2+1]  << "%: "<< etaFills[iter][iter2] << std::endl;
+    }
+  }
 
   std::cout << "#Events with no lead electron: " << nNoLeadEle << std::endl;
   std::cout << "#Events with no sublead electron: " << nNoSubleadEle << std::endl;

@@ -18,8 +18,8 @@
 
 Bool_t plotTrue = false;
 
-const Int_t nJetAlgo = 1;
-const std::string jetAlgo[nJetAlgo] = {"akCs4PF"};
+const Int_t nJetAlgo = 2;
+const std::string jetAlgo[nJetAlgo] = {"akPu3PF", "akVs3PF"};
 //const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
 //const std::string jetAlgo[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
 
@@ -45,9 +45,9 @@ const std::string qgStr[nQG] = {"Inc", "Q", "G"};
 const std::string qgStr2[nQG] = {"Inc.", "Quarks", "Gluons"};
 const Int_t qgCol[nQG] = {kGray+1, kBlue, kRed};
 
-const Int_t nPtCut = 4;
-const std::string ptCutStr[nPtCut] = {"(p_{T}^{reco} > 5)", "(p_{T}^{reco} > 10)", "(p_{T}^{reco} > 15)", "(p_{T}^{reco} > 20)"};
-const Int_t ptCutCol[nPtCut] = {kGray+1, kBlue, kRed, kYellow+1};
+const Int_t nPtCut = 5;
+const std::string ptCutStr[nPtCut] = {"(p_{T}^{reco} > 5)", "(p_{T}^{reco} > 10)", "(p_{T}^{reco} > 15)", "(p_{T}^{reco} > 20)", "(p_{T}^{reco} > 25)"};
+const Int_t ptCutCol[nPtCut] = {kGray+1, kBlue, kRed, kYellow+1, kMagenta};
 
 const Int_t nPtEta = 3;
 const std::string ptEtaStr[nPtEta] = {"VPt_", "VEta_", "VPtEta_"};
@@ -112,8 +112,8 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	    if(!plotTrue && name2.Index(Form("Fit")) < 0 && strcmp("Eff", inHistName[inHistNum].c_str()) != 0 && strcmp("Fake", inHistName[inHistNum].c_str()) != 0) continue;
 
 
-	    if(name2.Index("_Q_") >= 0) continue;
-	    if(name2.Index("_G_") >= 0) continue;
+	    //	    if(name2.Index("_Q_") >= 0) continue;
+	    //	    if(name2.Index("_G_") >= 0) continue;
 
 	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 	    if(!strcmp("Eff", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
@@ -315,6 +315,10 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
       else if(th1Name.find("Reco20") != std::string::npos){
 	colPos = 3;
 	legString = ptCutStr[3];
+      }
+      else if(th1Name.find("Reco25") != std::string::npos){
+	colPos = 4;
+	legString = ptCutStr[4];
       }
       else legString = ptCutStr[0];
     }
