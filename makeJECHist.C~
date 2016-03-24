@@ -1269,7 +1269,7 @@ void makeJECHist(const std::string inFileName, const Bool_t isPbPb)
 	  tempMean[0] = jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
 	  tempMeanErr[0] = jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
 	  tempRes[0] = jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
-	  tempResErr[0] = jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  tempResErr[0] = jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError()
 
 	  jtRecoGenDEtaVPt_Mean_p[iter][centIter][qgIter]->SetBinContent(jtIter+1, tempMean[0]);
 	  jtRecoGenDEtaVPt_Mean_p[iter][centIter][qgIter]->SetBinError(jtIter+1, tempMeanErr[0]);

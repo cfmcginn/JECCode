@@ -222,8 +222,6 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     Float_t dirMinBound = 0.5;
     if(!strcmp("Fake", inHistName[inHistNum].c_str())) dirMinBound = 0.0;
     else if(!strcmp("Res", meanResStr[meanResNum].c_str())) dirMinBound = 0.0;
-    else if(!strcmp("RecoGenDEta", inHistName[inHistNum].c_str())) dirMinBound = -10000;
-    else if(!strcmp("RecoGenDPhi", inHistName[inHistNum].c_str())) dirMinBound = -10000;
 
     Float_t dirMaxBound = 1.5;
 
