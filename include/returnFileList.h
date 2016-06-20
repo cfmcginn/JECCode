@@ -9,7 +9,7 @@
 #include "dirent.h"
 #include "sys/stat.h"
 
-#include "include/checkMakeDir.h"
+#include "checkMakeDir.h"
 
 const int listSizeLimit = 10000;
 

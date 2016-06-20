@@ -1,7 +1,7 @@
 #ifndef getBkgEstimate_h
 #define getBkgEstimate_h
 
-#include "include/etaPhiFunc.h"
+#include "etaPhiFunc.h"
 #include "TMath.h"
 
 const Float_t jtPtCut = 30;
