@@ -13,36 +13,22 @@
 
 #include <fstream>
 
-#include "getLogBins.h"
-#include "getLinBins.h"
-#include "etaPhiFunc.h"
-#include "getBkgEstimate.h"
+#include "include/getLogBins.h"
+#include "include/getLinBins.h"
+#include "include/etaPhiFunc.h"
+#include "include/getBkgEstimate.h"
 
-#include "returnFileList.h"
-#include "getResidualJetCorr.h"
+#include "include/returnFileList.h"
+#include "include/returnRootFileContentsList.h"
+#include "include/getResidualJetCorr.h"
 
 const Bool_t debugMode = false;
 
 const Bool_t doGetBkg = false;
 
 const Bool_t deriveResidualMode = false;
-const Bool_t applyResidualMode = true;
-const Bool_t applyResidualModeFull = true;
-
-//const Int_t nJetAlgo = 6;
-//const std::string jetAlgoTemp[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
-const Int_t nJetAlgoPbPb = 1;
-const std::string jetAlgoTempPbPb[nJetAlgoPbPb] = {"akPu3PF"/*, "akPu4PF"*/};
-//const std::string jetAlgoTemp[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
-//const Int_t jetAlgoR[nJetAlgo] = {4, 3, 4, 3};
-//const Int_t jetAlgoR[nJetAlgo] = {4, 4, 4, 4, 3, 3};
-const Int_t jetAlgoRPbPb[nJetAlgoPbPb] = {3/*, 4*/};
-
-
-const Int_t nJetAlgoPP = 2;
-const std::string jetAlgoTempPP[nJetAlgoPP] = {"ak3PF", "ak4PF"};
-const Int_t jetAlgoRPP[nJetAlgoPP] = {3, 4};
-
+const Bool_t applyResidualMode = false;
+const Bool_t applyResidualModeFull = false;
 
 const Int_t nJtCat = 3;
 const std::string jtCat[nJtCat] = {"Eta2", "Eta1", "Dijet"};
@@ -98,6 +84,10 @@ Bool_t isGoodPFJet(TString algo, Int_t chargedN, Float_t chargedSum, Float_t neu
     //    else if(chargedSum/rawPt >= .98) return false;
     //    else if(neutralSum/rawPt >= .98) return false;
     else return true;
+
+    //following lines just to get around unused variable temporrarily
+    if(chargedSum/rawPt >= .98) return false;
+    if(neutralSum/rawPt >= .98) return false;
   }
   else return false;
 }
@@ -225,17 +215,17 @@ void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Floa
 }
 
 
-void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgo = -1, const std::string inPPFileName = "")
+void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::string inPPFileName = "")
 {
   if(hist_p->GetEntries() == 0) return;
 
   TF1* f1_p;
 
   if(isPbPb){
-    if(jtAlgo == -1 || !strcmp(inPPFileName.c_str(), "")) return;
+    if(jtAlgoR == -1 || !strcmp(inPPFileName.c_str(), "")) return;
 
     TFile* ppFile_p = new TFile(inPPFileName.c_str(), "READ");
-    TH1F* ppHist_p = (TH1F*)ppFile_p->Get(Form("ak%dPF/jtRecoOverGenVPt_Inc_FitRes_ak%dPF_PP_h", jetAlgoRPbPb[jtAlgo], jetAlgoRPbPb[jtAlgo]));
+    TH1F* ppHist_p = (TH1F*)ppFile_p->Get(Form("ak%dPF/jtRecoOverGenVPt_Inc_FitRes_ak%dPF_PP_h", jtAlgoR, jtAlgoR));
     TF1* f1PP_p = (TF1*)ppHist_p->GetFunction("f1PP_p");
 
     Float_t par0 = f1PP_p->GetParameter(0);
@@ -376,9 +366,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   if(applyResidualMode){
     if(debugMode) std::cout << __LINE__ << std::endl;
 
-    initGetResidualJetCorr("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_pthat_30_RESIDUALCORR.root");
+    initGetResidualJetCorr("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_pthat_30_RESIDUALCORR.root");
 
-    //    initGetResidualJetCorr("merged_dgulhan-Pythia8_Dijet50_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160506_pthat_50_RESIDUALCORR_TEMPPREV.root");
+    //    initGetResidualJetCorr("outputDir/merged_dgulhan-Pythia8_Dijet50_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160506_pthat_50_RESIDUALCORR_TEMPPREV.root");
 
     //initGetResidualJetCorr("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160507_pthat_30_RESIDUALCORR.root");
 
@@ -454,6 +444,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     }
   }
 
+  std::string tempJetFileName = outName;
+
   if(debugMode) std::cout << __LINE__ << std::endl;
   const std::string inString = ".root";
   const std::string inString2 = "*";
@@ -512,50 +504,39 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
   
-  Int_t nJetAlgoTemp = nJetAlgoPP;
-  if(isPbPb) nJetAlgoTemp = nJetAlgoPbPb;
+  TFile* tempJetInFile_p = new TFile(tempJetFileName.c_str(), "READ");
+  const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
 
-  const Int_t nJetAlgo = nJetAlgoTemp;
-
-  std::string jetAlgo[nJetAlgoPbPb];
-  std::string jetAlgoTemp[nJetAlgoPbPb];
+  const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
+  std::cout << nJetAlgo << std::endl;
+  std::vector<std::string> jetAlgo;
   Int_t jetAlgoR[nJetAlgo];
 
-  if(isPbPb){
-    for(Int_t iter = 0; iter < nJetAlgo; iter++){
-      jetAlgoTemp[iter] = jetAlgoTempPbPb[iter];
-      jetAlgoR[iter] = jetAlgoRPbPb[iter];
-    }
-  }
-  else{
-    for(Int_t iter = 0; iter < nJetAlgo; iter++){
-      jetAlgoTemp[iter] = jetAlgoTempPP[iter];
-      jetAlgoR[iter] = jetAlgoRPP[iter];
-    }
-  }
-
-  ofstream myfile;
-  myfile.open ("example.txt");
-
-  
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    jetAlgo[iter] = jetAlgoTemp[iter];
-    /*
-      TString tempjt = jetAlgoTemp[iter].c_str();
-      Int_t pos = tempjt.Index("Vs");
-      
-      if(!isPbPb && pos >= 0){
-      jetAlgo[iter] = Form("%s%s", jetAlgoTemp[iter].substr(0, pos).c_str(), jetAlgoTemp[iter].substr(pos+2, jetAlgoTemp[iter].length() - pos - 2).c_str());
+    jetAlgo.push_back(jetAlgoInFile.at(iter).substr(0, jetAlgoInFile.at(iter).find("JetAnalyzer")));
+
+    for(Int_t rIter = 0; rIter < 10; rIter++){
+      if(jetAlgo.at(iter).find(std::to_string(rIter)) != std::string::npos){
+	jetAlgoR[iter] = rIter;
+	break;
       }
-      else jetAlgo[iter] = jetAlgoTemp[iter];
-    */
+    }
   }
+  
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
 
   if(debugMode) std::cout << __LINE__ << std::endl;
+
+  std::ofstream myfile;
+  myfile.open ("example.txt");
+
+  
+  if(debugMode) std::cout << __LINE__ << std::endl;
   
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    std::cout << "Algos: " << jetAlgo[iter] << std::endl;
+    std::cout << "Algos: " << jetAlgo.at(iter) << std::endl;
   }
 
   Int_t hiBin_ = -1;
@@ -833,14 +814,14 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
 
-    pthat_Unweighted_p[iter] = new TH1F(Form("pthat_Unweighted_%s_h", jetAlgo[iter].c_str()), ";pthat;Events", nPtHatBins, ptHatBins);
-    pthat_Weighted_p[iter] = new TH1F(Form("pthat_Weighted_%s_h", jetAlgo[iter].c_str()), ";pthat;Events", nPtHatBins, ptHatBins);
+    pthat_Unweighted_p[iter] = new TH1F(Form("pthat_Unweighted_%s_h", jetAlgo.at(iter).c_str()), ";pthat;Events", nPtHatBins, ptHatBins);
+    pthat_Weighted_p[iter] = new TH1F(Form("pthat_Weighted_%s_h", jetAlgo.at(iter).c_str()), ";pthat;Events", nPtHatBins, ptHatBins);
     pthat_Weighted_p[iter]->Sumw2();
 
     for(Int_t pthatIter = 0; pthatIter < nFiles; pthatIter++){
-      pthat_Unweighted_Sample_p[iter][pthatIter] = new TH1F(Form("pthat_Unweighted_%s_%d_h", jetAlgo[iter].c_str(), pthatVals[pthatIter]), Form(";pthat;Events (min pthat = %d", pthatVals[pthatIter]), nPtHatBins, ptHatBins);
+      pthat_Unweighted_Sample_p[iter][pthatIter] = new TH1F(Form("pthat_Unweighted_%s_%d_h", jetAlgo.at(iter).c_str(), pthatVals[pthatIter]), Form(";pthat;Events (min pthat = %d", pthatVals[pthatIter]), nPtHatBins, ptHatBins);
 
-      jtPerPthat_p[iter][pthatIter] = new TH1F(Form("jtPerPthat_%s_%d_h", jetAlgo[iter].c_str(), pthatVals[pthatIter]), Form(";pthat;Events (min pthat = %d)", pthatVals[pthatIter]), nJtPtBins, jtPtBins);
+      jtPerPthat_p[iter][pthatIter] = new TH1F(Form("jtPerPthat_%s_%d_h", jetAlgo.at(iter).c_str(), pthatVals[pthatIter]), Form(";pthat;Events (min pthat = %d)", pthatVals[pthatIter]), nJtPtBins, jtPtBins);
     }
 
     for(Int_t ptIter = 0; ptIter < nJtPtBins2; ptIter++){
@@ -866,15 +847,15 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	    jtRecoOverGenVCent_Mean_p[iter][ptIter][etaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVCent_%s_%sMean_%s_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), ptStr1.c_str(), etaStr1.c_str()), Form(";Centrality;#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nCentBins2, centBins2);
-	    jtRecoOverGenVCent_Res_p[iter][ptIter][etaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVCent_%s_%sRes_%s_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), ptStr1.c_str(), etaStr1.c_str()), Form(";Centrality;#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nCentBins2, centBins2);
+	    jtRecoOverGenVCent_Mean_p[iter][ptIter][etaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVCent_%s_%sMean_%s_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), ptStr1.c_str(), etaStr1.c_str()), Form(";Centrality;#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nCentBins2, centBins2);
+	    jtRecoOverGenVCent_Res_p[iter][ptIter][etaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVCent_%s_%sRes_%s_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), ptStr1.c_str(), etaStr1.c_str()), Form(";Centrality;#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nCentBins2, centBins2);
 	  }
 
           for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
 	    std::string centStr = "PP";
 	    if(isPbPb) centStr = Form("cent%dto%d", centBins[centIter+1]/2, centBins[centIter]/2);
 
-	    jtRecoOverGenVCent_MeanResPts_p[iter][ptIter][etaIter][qgIter][centIter] = new TH1F(Form("jtRecoOverGenVCent_%s_MeanResPts_%s_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), ptStr1.c_str(), etaStr1.c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo[iter].c_str(), centStr.c_str()), 30, 0, 3);
+	    jtRecoOverGenVCent_MeanResPts_p[iter][ptIter][etaIter][qgIter][centIter] = new TH1F(Form("jtRecoOverGenVCent_%s_MeanResPts_%s_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), ptStr1.c_str(), etaStr1.c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo.at(iter).c_str(), centStr.c_str()), 30, 0, 3);
 	  }
 	}
       }
@@ -885,31 +866,31 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       if(isPbPb) centStr = Form("cent%dto%d", centBins[centIter+1]/2, centBins[centIter]/2);
 
       
-      bkgEstimate_p[iter][centIter] = new TH1F(Form("bkgEstimate_%s_%s_h", jetAlgo[iter].c_str(), centStr.c_str()), Form(";Bkg. Estimate;Events"), 100, 0, 50);
+      bkgEstimate_p[iter][centIter] = new TH1F(Form("bkgEstimate_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Bkg. Estimate;Events"), 100, 0, 50);
 
-      areaEstimate_p[iter][centIter] = new TH1F(Form("areaEstimate_%s_%s_h", jetAlgo[iter].c_str(), centStr.c_str()), Form(";Area;Events"), 100, 0, 4*2*TMath::Pi());
+      areaEstimate_p[iter][centIter] = new TH1F(Form("areaEstimate_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Area;Events"), 100, 0, 4*2*TMath::Pi());
 
-      bkgAreaEstimate_p[iter][centIter] = new TH2F(Form("bkgAreaEstimate_%s_%s_h", jetAlgo[iter].c_str(), centStr.c_str()), Form(";Area;Bkg."), 20, 0, 4*2*TMath::Pi(), 20, 0, 50);
+      bkgAreaEstimate_p[iter][centIter] = new TH2F(Form("bkgAreaEstimate_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Area;Bkg."), 20, 0, 4*2*TMath::Pi(), 20, 0, 50);
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
-	jtPt_p[iter][centIter][qgIter] = new TH1F(Form("jtPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";p_{T};Events (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
-	genJtPt_p[iter][centIter][qgIter] = new TH1F(Form("genJtPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. p_{T};Events (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtPt_p[iter][centIter][qgIter] = new TH1F(Form("jtPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";p_{T};Events (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
+	genJtPt_p[iter][centIter][qgIter] = new TH1F(Form("genJtPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. p_{T};Events (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtEta_p[iter][centIter][qgIter] = new TH1F(Form("jtEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";#eta;Events (%s)", jetAlgo[iter].c_str()), 100, -3., 3.);
+	jtEta_p[iter][centIter][qgIter] = new TH1F(Form("jtEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#eta;Events (%s)", jetAlgo.at(iter).c_str()), 100, -3., 3.);
 
-	jtRecoGenDRVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoGenDRVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #DeltaR_{Reco. %s, Gen.}", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 20, 0, 0.4);
+	jtRecoGenDRVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoGenDRVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #DeltaR_{Reco. %s, Gen.}", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 20, 0, 0.4);
 
-	jtRecoGenDRVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#DeltaR_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDRVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#DeltaR_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtRecoGenDRVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#DeltaR_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDRVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#DeltaR_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtRecoGenDPhiVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#Delta#phi_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDPhiVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#Delta#phi_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtRecoGenDPhiVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#Delta#phi_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDPhiVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#Delta#phi_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtRecoGenDEtaVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#Delta#eta_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDEtaVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVPt_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; <#Delta#eta_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	jtRecoGenDEtaVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#Delta#eta_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtRecoGenDEtaVPt_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVPt_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; #sigma(#Delta#eta_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
 	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
 	  Int_t ptLowInt = std::trunc(jtPtBins[jtIter]);
@@ -918,24 +899,24 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
 	  Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
 	  
-	  jtRecoGenDRVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDRVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#DeltaR;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 0.4);
+	  jtRecoGenDRVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDRVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#DeltaR;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 0.4);
 
-	  jtRecoGenDPhiVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDPhiVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#Delta#phi;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, -0.4, 0.4);
+	  jtRecoGenDPhiVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDPhiVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#Delta#phi;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, -0.4, 0.4);
 
-	  jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDEtaVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#Delta#eta;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, -0.4, 0.4);
+	  jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDEtaVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#Delta#eta;Events (%d.%d<p_{T,Gen.}<%d.%d)", ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, -0.4, 0.4);
 	}
 
-	jtRecoGenDRVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#DeltaR_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDRVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#DeltaR_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	jtRecoGenDRVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#DeltaR_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDRVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDRVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#DeltaR_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	jtRecoGenDPhiVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#Delta#phi_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDPhiVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#Delta#phi_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	jtRecoGenDPhiVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#Delta#phi_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDPhiVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDPhiVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#Delta#phi_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	jtRecoGenDEtaVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#Delta#eta_{Reco. %s, Gen.}>", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDEtaVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVEta_Mean_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; <#Delta#eta_{Reco. %s, Gen.}>", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	jtRecoGenDEtaVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#Delta#eta_{Reco. %s, Gen.})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtRecoGenDEtaVEta_Res_p[iter][centIter][qgIter] = new TH1F(Form("jtRecoGenDEtaVEta_Res_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; #sigma(#Delta#eta_{Reco. %s, Gen.})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
 	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
 	  Int_t etaLowInt = std::trunc(jtEtaBins[jtIter]);
@@ -945,60 +926,60 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  Int_t etaHiDec = std::trunc(jtEtaBins[jtIter+1]*10 - etaHiInt*10);
 
 
-	  jtRecoGenDRVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDRVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#DeltaR;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 0.4);
+	  jtRecoGenDRVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDRVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#DeltaR;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 0.4);
 
-	  jtRecoGenDPhiVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDPhiVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#Delta#phi;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, -0.4, 0.4);
+	  jtRecoGenDPhiVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDPhiVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#Delta#phi;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, -0.4, 0.4);
 
-	  jtRecoGenDEtaVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDEtaVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";#Delta#eta;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, -0.4, 0.4);
+	  jtRecoGenDEtaVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoGenDEtaVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";#Delta#eta;Events (%d.%d<#eta_{Gen.}<%d.%d)", etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, -0.4, 0.4);
 	}
 
 
 
-	jtRecoVGen_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoVGen_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; Reco. %s Jet p_{T}", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, nJtPtBins, jtPtBins);
+	jtRecoVGen_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoVGen_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; Reco. %s Jet p_{T}", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, nJtPtBins, jtPtBins);
 
-	jtRecoOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+	jtRecoOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
-	jtRecoOverRawVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T}; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+	jtRecoOverRawVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T}; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
-	jtRawOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
+	jtRawOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 
 	for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	  jtEffVPt_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPt_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
+	  jtEffVPt_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPt_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
 	}
 
-	jtFakeVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
+	jtFakeVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 2, -0.5, 1.5);
 
 	for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	  jtEffVPtEta_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPtEta_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
-	  jtEffVPtEta_Denom_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPtEta_Reco%d_%s_Denom_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
+	  jtEffVPtEta_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPtEta_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
+	  jtEffVPtEta_Denom_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVPtEta_Reco%d_%s_Denom_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Gen. Jet p_{T} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, nJtPtBins, jtPtBins);
 	}
 
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	  jtRecoOverGenVRecoPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVRecoPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverGenVRecoPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVRecoPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	  jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#mu_{Reco./Raw} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
-	  jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRawOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Raw/Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	}
 
         for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	  jtEffVPt_Mean_p[iter][centIter][qgIter][recoCutIter] = new TH1F(Form("jtEffVPt_Reco%d_%s_Mean_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtEffVPt_Mean_p[iter][centIter][qgIter][recoCutIter] = new TH1F(Form("jtEffVPt_Reco%d_%s_Mean_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};Eff. (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	}
 
-	jtFakeVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVPt_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	jtFakeVPt_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVPt_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};Fake (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	  
-	  jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRecoOverRawVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet p_{T};#sigma_{Reco./Raw} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	  
-	  jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	  jtRawOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Raw/Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
 
 	  if(centIter == 0){
-	    jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_PERP_%s_%sRes_%s__h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	    jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_PERP_%s_%sRes_%s__h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
 	     for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
 	       Int_t rhoLowInt = std::trunc(rhoBins[rhoIter]);
@@ -1007,44 +988,44 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	       Int_t rhoLowDec = std::trunc(rhoBins[rhoIter]*10 - rhoLowInt*10);
 	       Int_t rhoHiDec = std::trunc(rhoBins[rhoIter+1]*10 - rhoHiInt*10);
 	       
-	       jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter] = new TH1F(Form("jtRecoRho%dOverGenVPt_Rho%dp%dto%dp%d_%s_%sRes_%s_h", rhoIter, rhoLowInt, rhoLowDec, rhoHiInt, rhoHiDec, qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtPtBins, jtPtBins);
+	       jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter] = new TH1F(Form("jtRecoRho%dOverGenVPt_Rho%dp%dto%dp%d_%s_%sRes_%s_h", rhoIter, rhoLowInt, rhoLowDec, rhoHiInt, rhoHiDec, qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	     }
 	  }
 
 	}
 	
-	jtRecoOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
+	jtRecoOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
-	jtRecoOverRawVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
+	jtRecoOverRawVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverRawVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet #eta; (Reco %s Jet p_{T})/(Raw Jet p_{T})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
-	jtRawOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
+	jtRawOverGenVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtRawOverGenVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta; (Raw %s Jet p_{T})/(Gen Jet p_{T})", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, 30, 0, 3);
 
         for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	  jtEffVEta_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVEta_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
+	  jtEffVEta_p[iter][centIter][qgIter][recoCutIter] = new TH2F(Form("jtEffVEta_Reco%d_%s_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
 	}
 
-	jtFakeVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
+	jtFakeVEta_p[iter][centIter][qgIter] = new TH2F(Form("jtFakeVEta_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins, 2, -0.5, 1.5);
 
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 
-	  jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#mu_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRecoOverRawVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#mu_{Reco./Raw} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	  
-	  jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRawOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Raw/Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	}
 	
         for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	  jtEffVEta_Mean_p[iter][centIter][qgIter][recoCutIter] = new TH1F(Form("jtEffVEta_Reco%d_%s_Mean_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtEffVEta_Mean_p[iter][centIter][qgIter][recoCutIter] = new TH1F(Form("jtEffVEta_Reco%d_%s_Mean_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;Eff. (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	}
 
-	jtFakeVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVEta_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	jtFakeVEta_Mean_p[iter][centIter][qgIter] = new TH1F(Form("jtFakeVEta_%s_Mean_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet #eta;Fake (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Reco./Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	  
-	  jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#sigma_{Reco./Raw} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRecoOverRawVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverRawVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Reco. Jet #eta;#sigma_{Reco./Raw} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	  
-	  jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo[iter].c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Raw/Gen.} (%s)", jetAlgo[iter].c_str()), nJtEtaBins, jtEtaBins);
+	  jtRawOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRawOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Raw/Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	}
 	
 
@@ -1055,14 +1036,14 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
 	  Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
 	  
-	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
+	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
 	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Sumw2();
 
-	  jtRecoOverGenVRecoPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVRecoPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
+	  jtRecoOverGenVRecoPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVRecoPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
 	  jtRecoOverGenVRecoPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Sumw2();
 	  
 	  if(centIter == 0){
-	    jtRecoOverGenVPt_PERP_MeanResPts_p[iter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_PERP_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
+	    jtRecoOverGenVPt_PERP_MeanResPts_p[iter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_PERP_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
 
 	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
 	      Int_t rhoLowInt = std::trunc(rhoBins[rhoIter]);
@@ -1071,19 +1052,19 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	      Int_t rhoLowDec = std::trunc(rhoBins[rhoIter]*10 - rhoLowInt*10);
 	      Int_t rhoHiDec = std::trunc(rhoBins[rhoIter+1]*10 - rhoHiInt*10);
 	      
-	      jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter] = new TH1F(Form("jtRecoRho%dOverGenVPt_Rho%dp%dto%dp%d_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_h", rhoIter, rhoLowInt, rhoLowDec, rhoHiInt, rhoHiDec, qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	      jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter] = new TH1F(Form("jtRecoRho%dOverGenVPt_Rho%dp%dto%dp%d_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_h", rhoIter, rhoLowInt, rhoLowDec, rhoHiInt, rhoHiDec, qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
 	    }
 	  }
 	  
-	  jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	  jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
 	  
-	  jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
+	  jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 30, 0, 3);
 	  
 	  for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	    jtEffVPt_MeanResPts_p[iter][centIter][qgIter][recoCutIter][jtIter] = new TH1F(Form("jtEffVPt_Reco%d_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
+	    jtEffVPt_MeanResPts_p[iter][centIter][qgIter][recoCutIter][jtIter] = new TH1F(Form("jtEffVPt_Reco%d_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
 	  }
 
-	  jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo[iter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
+	  jtFakeVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<p_{T,Reco.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 2, -0.5, 1.5);
 	}
 	
 	
@@ -1094,17 +1075,17 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  Int_t etaLowDec = std::trunc(jtEtaBins[jtIter]*10 - etaLowInt*10);
 	  Int_t etaHiDec = std::trunc(jtEtaBins[jtIter+1]*10 - etaHiInt*10);
 	  
-	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
 	  
-	  jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  jtRecoOverRawVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverRawVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Raw. Jet p_{T});Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
 	  
-	  jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
+	  jtRawOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRawOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Raw %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 30, 0, 3);
 	  
 	  for(Int_t recoCutIter = 0; recoCutIter < nJetRecoCuts; recoCutIter++){
-	    jtEffVEta_MeanResPts_p[iter][centIter][qgIter][recoCutIter][jtIter] = new TH1F(Form("jtEffVEta_Reco%d_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
+	    jtEffVEta_MeanResPts_p[iter][centIter][qgIter][recoCutIter][jtIter] = new TH1F(Form("jtEffVEta_Reco%d_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", jetRecoCuts[recoCutIter], qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Eff. (%s));Events (%d.%d<#eta_{Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
 	  }
 
-	  jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo[iter].c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo[iter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
+	  jtFakeVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtFakeVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Fake (%s));Events (%d.%d<#eta_{Reco.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 2, -0.5, 1.5);
 	}
       }
     }
@@ -1140,6 +1121,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	std::cout << "File " << listOfFiles[pthatIter].at(fileIter) << " is zombie. Continue" << std::endl;
         continue;
       }
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       TTree* jetTree_p = (TTree*)inFile_p->Get("akPu3PFJetAnalyzer/t");
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
@@ -1218,7 +1201,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   }
 
   //  TFile* ratioFile_p = new TFile("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160506_QGFRACTIONHIST.root", "READ");
-  TFile* ratioFile_p = new TFile("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
+  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
   TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
   TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
 
@@ -1263,7 +1246,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       TTree* jetTree_p[nJetAlgo];
       
       for(Int_t iter = 0; iter < nJetAlgo; iter++){
-	jetTree_p[iter] = (TTree*)inFile_p->Get(Form("%sJetAnalyzer/t", jetAlgo[iter].c_str()));
+	jetTree_p[iter] = (TTree*)inFile_p->Get(Form("%sJetAnalyzer/t", jetAlgo.at(iter).c_str()));
       }
 
       //      std::cout << "pthatPos, UpperPos, weight hi, events: " << pthatIter << ", " << pthatUpperPos << ", " << pthatWeights[pthatUpperPos] << ", " << jetTree_p[0]->GetEntries() << std::endl;
@@ -1605,11 +1588,17 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	if(applyResidualMode){
 	  for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
 	    for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
-	      jtPt_[algoIter][jtIter] = .98*jtPt_[algoIter][jtIter]*getResCorrJetPt(jtPt_[algoIter][jtIter], hiBin_);
+	      jtPt_[algoIter][jtIter] = jtPt_[algoIter][jtIter]*getResCorrJetPt(jtPt_[algoIter][jtIter], hiBin_);
 	      //	      if(refPt_[algoIter][jtIter] > 0) jtPt_[algoIter][jtIter] = jtPt_[algoIter][jtIter]*getResCorrJetPt(refPt_[algoIter][jtIter], hiBin_);
 	    }
 	  }
 	}
+	/*
+	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+	  for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
+	    jtPt_[algoIter][jtIter] = .98*jtPt_[algoIter][jtIter];
+	  }
+	  }*/
 
 	if(debugMode) std::cout << __LINE__ << std::endl;	  
 
@@ -1621,7 +1610,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    if(jtPt_[algoIter][jtIter] < 5.0) continue;
 	    
 
-	    if(isPbPb && !isGoodCaloJet(jetAlgoTemp[algoIter].c_str(), jtHCalSum_[algoIter][jtIter], jtECalSum_[algoIter][jtIter]) && !isGoodPFJet(jetAlgoTemp[algoIter].c_str(), jtChargedN_[algoIter][jtIter], jtChargedSum_[algoIter][jtIter], jtNeutralSum_[algoIter][jtIter], jtRawPt_[algoIter][jtIter])) continue;
+	    if(isPbPb && !isGoodCaloJet(jetAlgo.at(algoIter).c_str(), jtHCalSum_[algoIter][jtIter], jtECalSum_[algoIter][jtIter]) && !isGoodPFJet(jetAlgo.at(algoIter).c_str(), jtChargedN_[algoIter][jtIter], jtChargedSum_[algoIter][jtIter], jtNeutralSum_[algoIter][jtIter], jtRawPt_[algoIter][jtIter])) continue;
 	    
 	    
 	    
@@ -1676,9 +1665,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  Float_t evtArea = 0;
 	  
 	  std::vector<Bool_t>* isBkg_p = new std::vector<Bool_t>;
-	  
-	  //	if(doGetBkg) getBkgEstimate(jetAlgoR[algoIter], genPt_p, genPhi_p, genEta_p, nGenJt_[algoIter], genJtPt_[algoIter], genJtPhi_[algoIter], genJtEta_[algoIter], evtBkg, evtArea, isBkg_p);
-	  
+	  	  
 	  if(evtBkg != 0){
 	    bkgEstimate_p[algoIter][centPos]->Fill(evtBkg);
 	    areaEstimate_p[algoIter][centPos]->Fill(evtArea);
@@ -1738,15 +1725,16 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
             if(TMath::Abs(refPartFlav_[algoIter][jtIter/*tempPos*/]) < 9) qgPos[1] = 1;
             else if(TMath::Abs(refPartFlav_[algoIter][jtIter/*tempPos*/]) == 21) qgPos[1] = 2;
 
-	    if(qgPos[1] != 1 && qgPos[1] != 2) continue;
+	    //	    if(qgPos[1] != 1 && qgPos[1] != 2) continue;
 
 	    Float_t qgWeight = 1;
 	    
+	    /*
 	    if((applyResidualMode || deriveResidualMode)){
 	      if(qgPos[1] == 1) qgWeight *= qRatio_p->GetBinContent(qRatio_p->FindBin(refPt_[algoIter][jtIter]));
 	      else if(qgPos[1] == 2) qgWeight *= gRatio_p->GetBinContent(gRatio_p->FindBin(refPt_[algoIter][jtIter]));
 	    }
-	    
+	    */
 	    
 	    
 	    /*
@@ -1807,7 +1795,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 		  
 		  if(recoPosJet[jtIter] < 0){
 		    tempFillVal = 0;
-		    if(genJtPt_[algoIter][jtIter] > 150 && recoCutIter == 0) std::cout << "missed: " << entry << ", " << genJtPt_[algoIter][jtIter] << ", " << jetAlgoTempPbPb[algoIter] << std::endl;
+		    if(genJtPt_[algoIter][jtIter] > 150 && recoCutIter == 0) std::cout << "missed: " << entry << ", " << genJtPt_[algoIter][jtIter] << ", " << jetAlgo.at(algoIter) << std::endl;
 		  }
 		  else if(jtPt_[algoIter][recoPosJet[jtIter]] < jetRecoCuts[recoCutIter]) tempFillVal = 0;
 		  
@@ -1832,7 +1820,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    if(TMath::Abs(refEta_[algoIter][jtIter]) > 1.6) continue;
 	    if(refPt_[algoIter][jtIter] < 5.0) continue;
 	    if(refSubID_[algoIter][jtIter] != 0) continue;
-	    
+	    /*
 	    if((jtNeutralMax_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*(0.085)+
 	       jtPhotonMax_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*(-0.337)+
 	       jtChargedMax_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*0.584+
@@ -1840,7 +1828,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	       jtPhotonSum_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*(-0.127)+
 	       jtChargedSum_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*(-0.239)+
 	       jtPU_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]*(-0.184)+0.173 )< -0.45) continue;
-	    
+	    */
 
 	    //	    if(jtNeutralN_[algoIter][jtIter] == 0 && jtPhotonHardN_[algoIter][jtIter] == 0 && jtTrackN_[algoIter][jtIter] == 1) continue;
 	    
@@ -1885,12 +1873,12 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
 	    Float_t qgWeight = 1;
 	    
-	    
+	    /*
 	    if((applyResidualMode || deriveResidualMode)){
 	      if(qgPos[1] == 1) qgWeight *= qRatio_p->GetBinContent(qRatio_p->FindBin(refPt_[algoIter][jtIter]));
 	      else if(qgPos[1] == 2) qgWeight *= gRatio_p->GetBinContent(gRatio_p->FindBin(refPt_[algoIter][jtIter]));
 	    }
-	    
+	    */
 	    
 	    if(refPt_[algoIter][jtIter] < 25 || refPt_[algoIter][jtIter]  > 100) testFill3[algoIter][centPos]++;
 	    
@@ -2044,7 +2032,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    
 	    if(jtPt_[algoIter][boolIter] < 5.0) continue;
 	    
-	    if(isPbPb && !isGoodCaloJet(jetAlgoTemp[algoIter].c_str(), jtHCalSum_[algoIter][boolIter], jtECalSum_[algoIter][boolIter]) && !isGoodPFJet(jetAlgoTemp[algoIter].c_str(), jtChargedN_[algoIter][boolIter], jtChargedSum_[algoIter][boolIter], jtNeutralSum_[algoIter][boolIter], jtRawPt_[algoIter][boolIter])) continue;
+	    if(isPbPb && !isGoodCaloJet(jetAlgo.at(algoIter).c_str(), jtHCalSum_[algoIter][boolIter], jtECalSum_[algoIter][boolIter]) && !isGoodPFJet(jetAlgo.at(algoIter).c_str(), jtChargedN_[algoIter][boolIter], jtChargedSum_[algoIter][boolIter], jtNeutralSum_[algoIter][boolIter], jtRawPt_[algoIter][boolIter])) continue;
 	    
 	    Int_t fillVal = 1;
 	    //	  if(isUsedRecoJet[boolIter]) fillVal = 0;
@@ -2088,7 +2076,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     for(Int_t iter2 = 0; iter2 < nCentBins2; iter2++){
-      std::cout << "Fills for " << jetAlgo[iter] << ", centrality " << centBins[iter2] << "-" << centBins[iter2+1]  << "%: "<< etaFills[iter][iter2] << std::endl;
+      std::cout << "Fills for " << jetAlgo.at(iter) << ", centrality " << centBins[iter2] << "-" << centBins[iter2+1]  << "%: "<< etaFills[iter][iter2] << std::endl;
 
       std::cout << testFill1[iter][iter2] << ", " << testFill2[iter][iter2] << ", " << testFill3[iter][iter2] << std::endl;
 
@@ -2388,12 +2376,12 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   }
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
-    TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo[iter].c_str()));
+    TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo.at(iter).c_str()));
     if(dir_p){
       dir_p->cd();
     }
     else{
-      dir_p = outFile_p->mkdir(Form("%s", jetAlgo[iter].c_str()));
+      dir_p = outFile_p->mkdir(Form("%s", jetAlgo.at(iter).c_str()));
       dir_p->cd();
     }
 
@@ -2480,7 +2468,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  }
 
 	  std::cout << "A" << std::endl;
-	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
+	  //	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
 	  std::cout << "B" << std::endl;
 	  dir_p->cd();
 	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
