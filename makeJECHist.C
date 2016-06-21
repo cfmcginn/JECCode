@@ -22,7 +22,7 @@
 #include "include/returnRootFileContentsList.h"
 #include "include/getResidualJetCorr.h"
 
-const Bool_t debugMode = false;
+const Bool_t debugMode = true;
 
 const Bool_t doGetBkg = false;
 
@@ -1201,9 +1201,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   }
 
   //  TFile* ratioFile_p = new TFile("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160506_QGFRACTIONHIST.root", "READ");
-  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
-  TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
-  TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
+  //  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
+  //  TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
+  //  TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
 
 
     //  fileDiv = 1;
@@ -1236,7 +1236,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       //    std::cout << listOfFiles.at(fileIter).c_str() << std::endl;
 
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+      //      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
       TTree* rhoTree_p = (TTree*)inFile_p->Get("hiFJRhoAnalyzer/t");
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1261,7 +1261,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       hiTree_p->SetBranchAddress("vz", &vz_);
       hiTree_p->SetBranchAddress("run", &run_);
       hiTree_p->SetBranchAddress("evt", &evt_);
-      
+      /*
       genTree_p->SetBranchStatus("*", 0);
       genTree_p->SetBranchStatus("pt", 1);
       genTree_p->SetBranchStatus("phi", 1);
@@ -1272,7 +1272,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       genTree_p->SetBranchAddress("phi", &genPhi_p);
       genTree_p->SetBranchAddress("eta", &genEta_p);
       genTree_p->SetBranchAddress("pdg", &genPDG_p);
-      
+      */
       
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1314,6 +1314,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	jetTree_p[iter]->SetBranchStatus("subid", 1);
 	jetTree_p[iter]->SetBranchStatus("refparton_flavor", 1);
 	jetTree_p[iter]->SetBranchStatus("pthat", 1);
+	
 	jetTree_p[iter]->SetBranchStatus("ngen", 1);
 	jetTree_p[iter]->SetBranchStatus("genpt", 1);
 	jetTree_p[iter]->SetBranchStatus("geneta", 1);
@@ -1392,7 +1393,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	//      std::cout << "Gets here e" << std::endl;
 	
 	hiTree_p->GetEntry(entry);
-	genTree_p->GetEntry(entry);
+	//	genTree_p->GetEntry(entry);
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	if(isPbPb && isRho) rhoTree_p->GetEntry(entry);
 	
