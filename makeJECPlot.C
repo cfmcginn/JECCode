@@ -429,9 +429,9 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     if(centPos == 2 && !strcmp(ptEtaStr2[ptEtaNum].c_str(), "Eta" )) label_p->DrawLatex(.10, .9, Form("#bf{#color[2]{Gen. p_{T}>30}}"));
 
     if(isPbPb){
-      if(centPos%4 == 0 && centPos < 4) label_p->DrawLatex(.28, .25, centStrings2[centPos].c_str());
-      else if(centPos%4 == 0 && centPos > 3) label_p->DrawLatex(.28, .25, centStrings2[centPos].c_str());
-      else if(centPos%4 != 0 && centPos < 4) label_p->DrawLatex(.08, .25, centStrings2[centPos].c_str());
+      if(centPos%nCentBins == 0 && centPos < nCentBins) label_p->DrawLatex(.28, .25, centStrings2[centPos].c_str());
+      else if(centPos%nCentBins == 0 && centPos > nCentBins-1) label_p->DrawLatex(.28, .25, centStrings2[centPos].c_str());
+      else if(centPos%nCentBins != 0 && centPos < nCentBins) label_p->DrawLatex(.08, .25, centStrings2[centPos].c_str());
       else label_p->DrawLatex(.08, .25, centStrings2[centPos].c_str());
     }
     else{
@@ -1216,7 +1216,6 @@ void makeJECPlotMeanRes_Comp(const std::string inFileName, const Int_t alg1, con
   }
 
   const Int_t nTH1 = nTH1Temp;
-  const Int_t nDir = nDirTemp;
   TH1F* th1_p[nTH1];
   
   TCanvas* th1Canv_p;
