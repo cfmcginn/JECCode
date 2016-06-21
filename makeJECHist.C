@@ -22,7 +22,7 @@
 #include "include/returnRootFileContentsList.h"
 #include "include/getResidualJetCorr.h"
 
-const Bool_t debugMode = true;
+const Bool_t debugMode = false;
 
 const Bool_t doGetBkg = false;
 
@@ -120,6 +120,7 @@ void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtE
 
 void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr)
 {
+  if(hist_p->Integral() == 0) return;
   if(hist_p->GetEntries() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", "gaus", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
@@ -218,6 +219,7 @@ void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Floa
 void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::string inPPFileName = "")
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p;
 
@@ -271,6 +273,7 @@ void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::st
 void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p;
 
@@ -318,6 +321,7 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
 void FitCSNSimple(TH1F* hist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, hist_p->GetXaxis()->GetXmax());
   f1_p->SetParameter(0, .05);
@@ -335,6 +339,7 @@ void FitCSNSimple(TH1F* hist_p)
 void FitErf(TH1F* hist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", ".5*[0]*(1+TMath::Erf([1]+[2]*x))", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
   f1_p->SetParameter(0, .99);
@@ -1120,16 +1125,22 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
-      TTree* jetTree_p = (TTree*)inFile_p->Get("akPu3PFJetAnalyzer/t");
+      TTree* jetTree_p = (TTree*)inFile_p->Get(jetAlgoInFile[0].c_str());
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
+      if(debugMode) std::cout << __LINE__ << std::endl;
+
       jetTree_p->SetBranchStatus("*", 0);
       jetTree_p->SetBranchStatus("pthat", 1);
       jetTree_p->SetBranchAddress("pthat", &ptHat_[0]);
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       hiTree_p->SetBranchStatus("*", 0);
       hiTree_p->SetBranchStatus("hiBin", 1);
 
       hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       Int_t tempStartPos = 0;
       Int_t tempNEntries = jetTree_p->GetEntries();
@@ -1144,6 +1155,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       const Int_t nEntries = tempNEntries;
       Int_t entryDiv = ((Int_t)((nEntries-startPos)/10));
 
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       for(Int_t entry = startPos; entry < nEntries; entry++){
 	jetTree_p->GetEntry(entry);
@@ -1191,6 +1203,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     hibinWeightFile_p->Close();
     delete hibinWeightFile_p;
   }
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
   for(Int_t iter = 0; iter < nFiles; iter++){
     std::cout << "pthat bin " << iter << ": " << nPerPtHat[iter] << std::endl;
@@ -2465,9 +2479,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 
-	  std::cout << "A" << std::endl;
 	  //	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
-	  std::cout << "B" << std::endl;
 	  dir_p->cd();
 	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 
