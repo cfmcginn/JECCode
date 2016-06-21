@@ -16,6 +16,8 @@
 #include <iostream>
 #include <vector>
 
+#include "include/checkMakeDir.h"
+
 Bool_t plotTrue = false;
 
 Bool_t addResCorrStr = true;
@@ -471,7 +473,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 
     th1Canv_p[iter]->Write("", TObject::kOverwrite);
     claverCanvasSaving(th1Canv_p[iter], Form("pdfDir/%s%s", th1Canv_p[iter]->GetName(), resCorrStr.c_str()), "pdf");
-    claverCanvasSaving(th1Canv_p[iter], Form("pdfDir/%s%s", th1Canv_p[iter]->GetName(), resCorrStr.c_str()), "C");
+    //    claverCanvasSaving(th1Canv_p[iter], Form("pdfDir/%s%s", th1Canv_p[iter]->GetName(), resCorrStr.c_str()), "C");
   }
 
   outFile_p->Close();
@@ -2077,6 +2079,8 @@ void makeCentVRhoPlot(const std::string inFileName, Bool_t isPbPb)
 
 void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
 {
+  checkMakeDir("pdfDir");
+  
   //  makeCentVRhoPlot(inFileName, isPbPb);
 
   //  makeJECPlotMeanRes_Rho(inFileName, nHistName-1+4+10+1, 1, isPbPb);
