@@ -120,6 +120,7 @@ void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtE
 
 void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr)
 {
+  if(hist_p->Integral() == 0) return;
   if(hist_p->GetEntries() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", "gaus", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
@@ -218,6 +219,7 @@ void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Floa
 void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::string inPPFileName = "")
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p;
 
@@ -250,8 +252,6 @@ void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::st
     //    f1_p->SetParLimits(0, 0, 1000000000);
   }
   else{
-    std::cout << "We fittin" << std::endl;
-    std::cout << "chichi" << std::endl;
     f1_p = new TF1("f1PP_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, hist_p->GetXaxis()->GetXmax());
     f1_p->SetParameter(0, .03);
     f1_p->SetParameter(1, 1.2);
@@ -273,6 +273,7 @@ void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::st
 void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p;
 
@@ -299,8 +300,6 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
     //    f1_p->SetParLimits(0, 0, 1000000000);
   }
   else{
-    std::cout << "We fittin" << std::endl;
-    std::cout << "chichi" << std::endl;
     f1_p = new TF1("f1Perph_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, 100/*hist_p->GetXaxis()->GetXmax()*/);
     f1_p->SetParameter(0, .03);
     f1_p->SetParameter(1, 1.2);
@@ -322,6 +321,7 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
 void FitCSNSimple(TH1F* hist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, hist_p->GetXaxis()->GetXmax());
   f1_p->SetParameter(0, .05);
@@ -339,6 +339,7 @@ void FitCSNSimple(TH1F* hist_p)
 void FitErf(TH1F* hist_p)
 {
   if(hist_p->GetEntries() == 0) return;
+  if(hist_p->Integral() == 0) return;
 
   TF1* f1_p = new TF1("f1_p", ".5*[0]*(1+TMath::Erf([1]+[2]*x))", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
   f1_p->SetParameter(0, .99);
@@ -1124,16 +1125,22 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
-      TTree* jetTree_p = (TTree*)inFile_p->Get("akPu3PFJetAnalyzer/t");
+      TTree* jetTree_p = (TTree*)inFile_p->Get(jetAlgoInFile[0].c_str());
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
+      if(debugMode) std::cout << __LINE__ << std::endl;
+
       jetTree_p->SetBranchStatus("*", 0);
       jetTree_p->SetBranchStatus("pthat", 1);
       jetTree_p->SetBranchAddress("pthat", &ptHat_[0]);
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       hiTree_p->SetBranchStatus("*", 0);
       hiTree_p->SetBranchStatus("hiBin", 1);
 
       hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       Int_t tempStartPos = 0;
       Int_t tempNEntries = jetTree_p->GetEntries();
@@ -1148,6 +1155,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       const Int_t nEntries = tempNEntries;
       Int_t entryDiv = ((Int_t)((nEntries-startPos)/10));
 
+      if(debugMode) std::cout << __LINE__ << std::endl;
 
       for(Int_t entry = startPos; entry < nEntries; entry++){
 	jetTree_p->GetEntry(entry);
@@ -1196,14 +1204,16 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     delete hibinWeightFile_p;
   }
 
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
   for(Int_t iter = 0; iter < nFiles; iter++){
     std::cout << "pthat bin " << iter << ": " << nPerPtHat[iter] << std::endl;
   }
 
   //  TFile* ratioFile_p = new TFile("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160506_QGFRACTIONHIST.root", "READ");
-  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
-  TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
-  TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
+  //  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
+  //  TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
+  //  TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
 
 
     //  fileDiv = 1;
@@ -1236,7 +1246,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       //    std::cout << listOfFiles.at(fileIter).c_str() << std::endl;
 
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+      //      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
       TTree* rhoTree_p = (TTree*)inFile_p->Get("hiFJRhoAnalyzer/t");
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1261,7 +1271,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       hiTree_p->SetBranchAddress("vz", &vz_);
       hiTree_p->SetBranchAddress("run", &run_);
       hiTree_p->SetBranchAddress("evt", &evt_);
-      
+      /*
       genTree_p->SetBranchStatus("*", 0);
       genTree_p->SetBranchStatus("pt", 1);
       genTree_p->SetBranchStatus("phi", 1);
@@ -1272,7 +1282,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       genTree_p->SetBranchAddress("phi", &genPhi_p);
       genTree_p->SetBranchAddress("eta", &genEta_p);
       genTree_p->SetBranchAddress("pdg", &genPDG_p);
-      
+      */
       
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1314,6 +1324,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	jetTree_p[iter]->SetBranchStatus("subid", 1);
 	jetTree_p[iter]->SetBranchStatus("refparton_flavor", 1);
 	jetTree_p[iter]->SetBranchStatus("pthat", 1);
+	
 	jetTree_p[iter]->SetBranchStatus("ngen", 1);
 	jetTree_p[iter]->SetBranchStatus("genpt", 1);
 	jetTree_p[iter]->SetBranchStatus("geneta", 1);
@@ -1392,7 +1403,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	//      std::cout << "Gets here e" << std::endl;
 	
 	hiTree_p->GetEntry(entry);
-	genTree_p->GetEntry(entry);
+	//	genTree_p->GetEntry(entry);
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	if(isPbPb && isRho) rhoTree_p->GetEntry(entry);
 	
@@ -1461,6 +1472,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	Float_t twoMuEta = -100;
 	Float_t twoMuPhi = -100;
 	
+	/*
 	const Int_t nMult_ = genPt_p->size();
 	
 	for(Int_t iter = 0; iter < nMult_; iter++){
@@ -1500,7 +1512,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 	}
-	
+	*/	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	
@@ -2467,9 +2479,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 
-	  std::cout << "A" << std::endl;
 	  //	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
-	  std::cout << "B" << std::endl;
 	  dir_p->cd();
 	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 
