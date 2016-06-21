@@ -250,8 +250,6 @@ void FitCSN(TH1F* hist_p, Bool_t isPbPb, const Int_t jtAlgoR = -1, const std::st
     //    f1_p->SetParLimits(0, 0, 1000000000);
   }
   else{
-    std::cout << "We fittin" << std::endl;
-    std::cout << "chichi" << std::endl;
     f1_p = new TF1("f1PP_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, hist_p->GetXaxis()->GetXmax());
     f1_p->SetParameter(0, .03);
     f1_p->SetParameter(1, 1.2);
@@ -299,8 +297,6 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
     //    f1_p->SetParLimits(0, 0, 1000000000);
   }
   else{
-    std::cout << "We fittin" << std::endl;
-    std::cout << "chichi" << std::endl;
     f1_p = new TF1("f1Perph_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, 100/*hist_p->GetXaxis()->GetXmax()*/);
     f1_p->SetParameter(0, .03);
     f1_p->SetParameter(1, 1.2);
@@ -1462,6 +1458,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	Float_t twoMuEta = -100;
 	Float_t twoMuPhi = -100;
 	
+	/*
 	const Int_t nMult_ = genPt_p->size();
 	
 	for(Int_t iter = 0; iter < nMult_; iter++){
@@ -1501,7 +1498,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 	}
-	
+	*/	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	
