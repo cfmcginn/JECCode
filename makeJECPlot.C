@@ -2111,7 +2111,7 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
     }
   }
 
- 
+ /* 
   for(Int_t ptEtaIter = 0; ptEtaIter < nPtEta-1; ptEtaIter++){
     makeJECPlotMeanRes(inFileName, nHistName, 0, ptEtaIter, isPbPb);
     makeJECPlotMeanRes(inFileName, nHistName+2, 0, ptEtaIter, isPbPb);
@@ -2120,7 +2120,7 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
     makeJECPlotMeanRes(inFileName, nHistName, 1, ptEtaIter, isPbPb);
     makeJECPlotMeanRes(inFileName, nHistName+2, 1, ptEtaIter, isPbPb);
     makeJECPlotMeanRes(inFileName, nHistName+3, 1, ptEtaIter, isPbPb);
-  }
+    }*/
  
   /*
   makeJECPlotMeanRes(inFileName, nHistName+4, 1, 0, isPbPb);
@@ -2146,7 +2146,7 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
   */
 
   
-  for(Int_t iter = 0; iter < nJetAlgo-1; iter++){
+  /*  for(Int_t iter = 0; iter < nJetAlgo-1; iter++){
     for(Int_t iter2 = iter+1; iter2 < nJetAlgo; iter2++){
       
       std::cout << "iters: " << iter << ", " << iter2 << std::endl;
@@ -2161,7 +2161,7 @@ void makeJECPlot(const std::string inFileName, const Bool_t isPbPb)
 	makeJECPlotMeanRes_Comp(inFileName, iter, iter2, 8, 1, ptEtaIter, isPbPb);
       }
     }
-  }
+    }*/
   
   return;
 }
