@@ -45,7 +45,7 @@ std::vector<std::string> returnRootFileContentsList(TFile *inFile_p, const std::
 
 
   int iter = 0;
-  while(iter < (int)returnList.size())
+  while(iter < (int)returnList.size()){
     bool isMatch = false;
     for(int iter2 = iter+1; iter2 < (int)returnList.size(); iter2++){
 
