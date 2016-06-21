@@ -43,6 +43,22 @@ std::vector<std::string> returnRootFileContentsList(TFile *inFile_p, const std::
     returnList.push_back(name);
   }
 
+
+  int iter = 0;
+  while(iter < (int)returnList.size())
+    bool isMatch = false;
+    for(int iter2 = iter+1; iter2 < (int)returnList.size(); iter2++){
+
+      if(returnList.at(iter).size() == returnList.at(iter2).size() && returnList.at(iter).find(returnList.at(iter2)) != std::string::npos){
+	isMatch = true;
+	returnList.erase(returnList.begin() + iter2);
+	break;
+      }
+    }
+
+    if(!isMatch) iter++;
+  }
+
   return returnList;
 }
 
