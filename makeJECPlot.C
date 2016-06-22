@@ -149,7 +149,15 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   const Int_t nTH1 = nTH1Temp;
   const Int_t nDir = nDirTemp;
   TH1F* th1_p[nTH1];
+
+  //  std::cout << "Th1 and dir: " << nTH1  << ", " << nDir << std::endl;
+    
+  /*  for(int iter = 0; iter < nTH1; iter++){
+    std::cout << th1Names_p->at(iter) << std::endl;
+    }*/
   
+  
+
   TCanvas* th1Canv_p[nDir];
 
   Int_t nXPanel = nCentBins;
@@ -239,6 +247,11 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+      
+      //std::cout << dirNames_p->at(dirIter) << ", " << th1Name << std::endl;
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -269,8 +282,10 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     else dirMin[iter] /= 2;
   }
 
+  std::cout << "Before fiz: " << dirMax[0] << std::endl;
+
   Float_t dirMaxMin = 1.15;
-  if(!strcmp("Res", meanResStr[meanResNum].c_str())) dirMaxMin = 0;
+  if(!strcmp("Res", meanResStr[meanResNum].c_str())) dirMaxMin = 0.5;
 
   if(strcmp(inHistName[inHistNum].c_str(), "RecoGenDR") != 0 && strcmp(inHistName[inHistNum].c_str(), "RecoGenDEta") != 0 && strcmp(inHistName[inHistNum].c_str(), "RecoGenDPhi") != 0){
     for(Int_t iter = 0; iter < nDir; iter++){
@@ -288,12 +303,21 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     }
   }
 
+
+  if(inHistName[inHistNum].find("Res") != std::string::npos){
+    for(Int_t iter = 0; iter < nDir; iter++){
+      std::cout << dirMax[iter] << ", " << dirMin[iter] << std::endl;
+    }
+  }
+
   for(Int_t iter = 0; iter < nTH1; iter++){
     std::string th1Name = th1Names_p->at(iter);
 
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -641,6 +665,9 @@ void makeJECPlotMeanRes_Cent(const std::string inFileName, const Int_t inHistNum
 
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
       if(pos != std::string::npos){
         dirPos = dirIter;
@@ -685,6 +712,8 @@ void makeJECPlotMeanRes_Cent(const std::string inFileName, const Int_t inHistNum
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -998,6 +1027,9 @@ void makeJECPlotMeanRes_Rho(const std::string inFileName, const Int_t inHistNum,
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -1032,6 +1064,9 @@ void makeJECPlotMeanRes_Rho(const std::string inFileName, const Int_t inHistNum,
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -1705,6 +1740,9 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
@@ -1746,6 +1784,9 @@ void makeJECPlotMeanPts(const std::string inFileName, const Int_t inHistNum, con
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
       if(pos != std::string::npos){
         dirPos = dirIter;
         break;
