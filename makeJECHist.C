@@ -1269,7 +1269,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       //    std::cout << listOfFiles.at(fileIter).c_str() << std::endl;
 
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+      //      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
       TTree* rhoTree_p = (TTree*)inFile_p->Get("hiFJRhoAnalyzer/t");
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1294,7 +1294,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       hiTree_p->SetBranchAddress("vz", &vz_);
       hiTree_p->SetBranchAddress("run", &run_);
       hiTree_p->SetBranchAddress("evt", &evt_);
-      
+      /*
       genTree_p->SetBranchStatus("*", 0);
       genTree_p->SetBranchStatus("pt", 1);
       genTree_p->SetBranchStatus("phi", 1);
@@ -1306,7 +1306,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       genTree_p->SetBranchAddress("eta", &genEta_p);
       genTree_p->SetBranchAddress("pdg", &genPDG_p);
       
-      
+      */
       if(debugMode) std::cout << __LINE__ << std::endl;
       
       if(isPbPb && isRho){
@@ -1426,7 +1426,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	//      std::cout << "Gets here e" << std::endl;
 	
 	hiTree_p->GetEntry(entry);
-	genTree_p->GetEntry(entry);
+	//	genTree_p->GetEntry(entry);
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	if(isPbPb && isRho) rhoTree_p->GetEntry(entry);
 	
@@ -1498,7 +1498,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	Float_t maxPhoPt = -1;
 	Float_t maxPhoEta = -100;
 	Float_t maxPhoPhi = -100;
-	
+	/*
 	const Int_t nMult_ = genPt_p->size();
 	
 	for(Int_t iter = 0; iter < nMult_; iter++){
@@ -1545,7 +1545,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	      maxPhoPhi = genPhi_p->at(iter);
 	    }
 	  }
-	}
+	  }*/
 		
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
