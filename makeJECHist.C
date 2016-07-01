@@ -506,7 +506,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
   
   TFile* tempJetInFile_p = new TFile(tempJetFileName.c_str(), "READ");
-  const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "akPu3PFJetAnalyzer");
+  const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
 
   const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
   std::cout << nJetAlgo << std::endl;
@@ -1149,7 +1149,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       if(debugMode) std::cout << __LINE__ << std::endl;
 
       TTree* jetTree_p = (TTree*)inFile_p->Get(jetAlgoInFile[0].c_str());
-      TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
+      TTree* hiTree_p = 0;
+      if(isPbPb) hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
       if(debugMode) std::cout << __LINE__ << std::endl;
 
       jetTree_p->SetBranchStatus("*", 0);
@@ -1158,10 +1159,12 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
-      hiTree_p->SetBranchStatus("*", 0);
-      hiTree_p->SetBranchStatus("hiBin", 1);
-
-      hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+      if(isPbPb){
+	hiTree_p->SetBranchStatus("*", 0);
+	hiTree_p->SetBranchStatus("hiBin", 1);
+	
+	hiTree_p->SetBranchAddress("hiBin", &hiBin_);
+      }
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
@@ -1182,7 +1185,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       for(Int_t entry = startPos; entry < nEntries; entry++){
 	jetTree_p->GetEntry(entry);
-	hiTree_p->GetEntry(entry);
+	if(isPbPb) hiTree_p->GetEntry(entry);
 
         Int_t pthatLowerPos = -1;
         for(Int_t pthatIter2 = nFiles-1; pthatIter2 >= 0; pthatIter2--){
@@ -1197,7 +1200,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  pthatLowerPos = 0;
         }
 
-	localHibin_p->Fill(hiBin_);
+	if(isPbPb) localHibin_p->Fill(hiBin_);
 
 	nPerPtHat[pthatLowerPos]++;
       }
