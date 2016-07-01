@@ -505,7 +505,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
   
-  TFile* tempJetInFile_p = new TFile(tempJetFileName.c_str(), "READ");
+  TFile* tempJetInFile_p = TFile::Open(tempJetFileName.c_str(), "READ");
   const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
 
   const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
@@ -1135,7 +1135,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     if(fileDiv < 1) fileDiv = 1;
     
     for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
-      TFile* inFile_p = new TFile(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
+      TFile* inFile_p = TFile::Open(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
       if(inFile_p == NULL) continue;
       if(inFile_p->GetSize() < 1000){
 	std::cout << "File " << listOfFiles[pthatIter].at(fileIter) << " less than 1 kb. Continue" << std::endl;
@@ -1206,7 +1206,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       }
 
       inFile_p->Close();
-      delete inFile_p;
     }
   }
 
@@ -1256,7 +1255,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
       if(fileIter%fileDiv == 0) std::cout << "File # " << fileIter << "/" << numberOfFiles << std::endl;
       
-      TFile* inFile_p = new TFile(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
+      TFile* inFile_p = TFile::Open(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
       
       
       if(inFile_p == NULL) continue;
@@ -2137,7 +2136,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       	}
       }
       inFile_p->Close();
-      delete inFile_p;
     }
   }    
 
