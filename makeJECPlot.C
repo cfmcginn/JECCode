@@ -212,7 +212,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
   }  
 
   for(Int_t iter = 0; iter < nDir; iter++){
-    th1Canv_p[iter] = new superCanvas(nXPanel, nYPanel, th1CanvTot[iter][0][0]);
+    th1Canv_p[iter] = new superCanvas(nXPanel, nYPanel, th1CanvTot[iter][0][0], 1000, dirNames_p->at(iter));
 
     th1Canv_p[iter]->SetGlobalMaxMin();
     
