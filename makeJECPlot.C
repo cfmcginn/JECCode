@@ -217,7 +217,10 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     th1Canv_p[iter]->SetGlobalMaxMin();
     
     if(meanResStr[meanResNum].find("Mean") != std::string::npos){
-      if(inHistName[inHistNum].find("RecoOverGen") != std::string::npos) th1Canv_p[iter]->CapGlobalMaxMin(1.2, 0.8);
+      if(inHistName[inHistNum].find("RecoOverGen") != std::string::npos){
+	th1Canv_p[iter]->CapGlobalMaxMin(1.5, 0.5);
+	th1Canv_p[iter]->UnderCapGlobalMaxMin(1.15, 0.85);
+      }
       if(inHistName[inHistNum].find("Eff") != std::string::npos) th1Canv_p[iter]->CapGlobalMaxMin(1.1, 0.0);
     }
     if(meanResStr[meanResNum].find("Res") != std::string::npos) th1Canv_p[iter]->CapGlobalMaxMin(0.7, 0.0);
@@ -338,7 +341,11 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     else centPos = 0;
     
 
-    th1Canv_p[dirPos]->SetHist(th1_p[iter], centPos, 0, th1CanvCount[dirPos][centPos][0]);
+    std::string legStr = "Incl.";
+    if(th1Name.find("_Q_") != std::string::npos) legStr = "Quark";
+    else if(th1Name.find("_G_") != std::string::npos) legStr = "Gluon";
+
+    th1Canv_p[dirPos]->SetHist(th1_p[iter], centPos, 0, th1CanvCount[dirPos][centPos][0], legStr);
     th1CanvCount[dirPos][centPos][0]++;
   }
 
@@ -360,9 +367,12 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	}
 
 	if(iter == 0) th1Canv_p[dirIter]->DrawLabel1(iter, 0, dirNames_p->at(dirIter));
-	th1Canv_p[dirIter]->DrawLabel2(iter, 0, centStrings2[iter]);
+	if(isPbPb) th1Canv_p[dirIter]->DrawLabel2(iter, 0, centStrings2[iter]);
+	else th1Canv_p[dirIter]->DrawLabel2(iter, 0, "PP");
       }
     }
+
+    th1Canv_p[dirIter]->DrawLegend();
   }
   /*  
   for(Int_t iter = 0; iter < nTH1; iter++){
