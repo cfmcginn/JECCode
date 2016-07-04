@@ -41,9 +41,9 @@ const std::string qg[nQG] = {"Inc", "Q", "G"};
 
 const Int_t nMaxJets = 500;
 
-const Int_t nCentBins = 4;
-const Int_t centBins[nCentBins+1] = {200, 100, 60, 20, 0};
-const Float_t centBins2[nCentBins+1] = {0.001, 10, 30, 50, 99.999};
+const Int_t nCentBins = 2;
+const Int_t centBins[nCentBins+1] = {200, 60, 0};
+const Float_t centBins2[nCentBins+1] = {0.001, 30, 99.999};
 //const Int_t nCentBins = 4;
 //const Int_t centBins[nCentBins+1] = {200, 100, 60, 20, 0};
 //const Float_t centBins2[nCentBins+1] = {0.001, 10, 30, 50, 99.999};
@@ -134,7 +134,7 @@ void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Floa
   resErr = f1_p->GetParError(2);
 
   //  if(TMath::Abs(mean - 1.0) < 0.01) return;
-  //  if(f1_p->GetProb() > .01) return;
+  if(f1_p->GetProb() > .01) return;
   if(!isPbPb) return;
 
   for(Int_t fitIter = 0; fitIter < 1; fitIter++){
@@ -300,7 +300,7 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
     //    f1_p->SetParLimits(0, 0, 1000000000);
   }
   else{
-    f1_p = new TF1("f1Perph_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 50/*hist_p->GetXaxis()->GetXmin()*/, 300/*hist_p->GetXaxis()->GetXmax()*/);
+    f1_p = new TF1("f1Perph_p", "TMath::Sqrt([0]*[0] + [1]*[1]/(x) + [2]*[2]/(x*x))", 30/*hist_p->GetXaxis()->GetXmin()*/, 300/*hist_p->GetXaxis()->GetXmax()*/);
     f1_p->SetParameter(0, .03);
     f1_p->SetParameter(1, 1.2);
     f1_p->SetParameter(2, .001);
@@ -310,7 +310,7 @@ void FitCSN2(TH1F* hist_p, Bool_t isPerph, TH1F* perphHist_p)
   }
 
   if(!isPerph) hist_p->Fit("f1_p", "Q M", "", 30, 200/*hist_p->GetXaxis()->GetXmax()*/);
-  else hist_p->Fit("f1Perph_p", "Q M", "", 50, 300/*hist_p->GetXaxis()->GetXmax()*/);
+  else hist_p->Fit("f1Perph_p", "Q M", "", 30, 300/*hist_p->GetXaxis()->GetXmax()*/);
 
   delete f1_p;
 
@@ -505,8 +505,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
   
-  TFile* tempJetInFile_p = TFile::Open(tempJetFileName.c_str(), "READ");
-  const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+  TFile* tempJetInFile_p = new TFile(tempJetFileName.c_str(), "READ");
+  const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "3PFJetAnalyzer");
 
   const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
   std::cout << nJetAlgo << std::endl;
@@ -594,8 +594,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   
   //  const Int_t nJtPtBins = 30;
   const Int_t nJtPtBins = 20;
-  const Float_t jtPtLow = 25;
-  const Float_t jtPtHi = 100;
+  const Float_t jtPtLow = 28;
+  const Float_t jtPtHi = 125;
 
   const Int_t nJtPtBinsPERP = 25;
   const Float_t jtPtLowPERP = 50;
@@ -1135,7 +1135,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     if(fileDiv < 1) fileDiv = 1;
     
     for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
-      TFile* inFile_p = TFile::Open(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
+      TFile* inFile_p = new TFile(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
       if(inFile_p == NULL) continue;
       if(inFile_p->GetSize() < 1000){
 	std::cout << "File " << listOfFiles[pthatIter].at(fileIter) << " less than 1 kb. Continue" << std::endl;
@@ -1149,8 +1149,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       if(debugMode) std::cout << __LINE__ << std::endl;
 
       TTree* jetTree_p = (TTree*)inFile_p->Get(jetAlgoInFile[0].c_str());
-      TTree* hiTree_p = 0;
-      if(isPbPb) hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
+      TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
       if(debugMode) std::cout << __LINE__ << std::endl;
 
       jetTree_p->SetBranchStatus("*", 0);
@@ -1159,12 +1158,10 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
-      if(isPbPb){
-	hiTree_p->SetBranchStatus("*", 0);
-	hiTree_p->SetBranchStatus("hiBin", 1);
-	
-	hiTree_p->SetBranchAddress("hiBin", &hiBin_);
-      }
+      hiTree_p->SetBranchStatus("*", 0);
+      hiTree_p->SetBranchStatus("hiBin", 1);
+
+      hiTree_p->SetBranchAddress("hiBin", &hiBin_);
 
       if(debugMode) std::cout << __LINE__ << std::endl;
 
@@ -1185,7 +1182,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       for(Int_t entry = startPos; entry < nEntries; entry++){
 	jetTree_p->GetEntry(entry);
-	if(isPbPb) hiTree_p->GetEntry(entry);
+	hiTree_p->GetEntry(entry);
 
         Int_t pthatLowerPos = -1;
         for(Int_t pthatIter2 = nFiles-1; pthatIter2 >= 0; pthatIter2--){
@@ -1200,12 +1197,13 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  pthatLowerPos = 0;
         }
 
-	if(isPbPb) localHibin_p->Fill(hiBin_);
+	localHibin_p->Fill(hiBin_);
 
 	nPerPtHat[pthatLowerPos]++;
       }
 
       inFile_p->Close();
+      delete inFile_p;
     }
   }
 
@@ -1255,7 +1253,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     for(Int_t fileIter = 0; fileIter < numberOfFiles; fileIter++){
       if(fileIter%fileDiv == 0) std::cout << "File # " << fileIter << "/" << numberOfFiles << std::endl;
       
-      TFile* inFile_p = TFile::Open(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
+      TFile* inFile_p = new TFile(listOfFiles[pthatIter].at(fileIter).c_str(), "READ");
       
       
       if(inFile_p == NULL) continue;
@@ -1271,7 +1269,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       //    std::cout << listOfFiles.at(fileIter).c_str() << std::endl;
 
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-      //      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
       TTree* rhoTree_p = (TTree*)inFile_p->Get("hiFJRhoAnalyzer/t");
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1296,7 +1294,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       hiTree_p->SetBranchAddress("vz", &vz_);
       hiTree_p->SetBranchAddress("run", &run_);
       hiTree_p->SetBranchAddress("evt", &evt_);
-      /*
+      
       genTree_p->SetBranchStatus("*", 0);
       genTree_p->SetBranchStatus("pt", 1);
       genTree_p->SetBranchStatus("phi", 1);
@@ -1308,7 +1306,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       genTree_p->SetBranchAddress("eta", &genEta_p);
       genTree_p->SetBranchAddress("pdg", &genPDG_p);
       
-      */
+      
       if(debugMode) std::cout << __LINE__ << std::endl;
       
       if(isPbPb && isRho){
@@ -1417,7 +1415,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
       const Int_t startPos = tempStartPos;
       const Int_t nEntries = tempNEntries;
-      Int_t entryDiv = ((Int_t)((nEntries-startPos)/10));
+      Int_t entryDiv = TMath::Max(1, ((Int_t)((nEntries-startPos)/200)));
       
       //    std::cout << "Gets Here C" << std::endl;
       
@@ -1428,7 +1426,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	//      std::cout << "Gets here e" << std::endl;
 	
 	hiTree_p->GetEntry(entry);
-	//	genTree_p->GetEntry(entry);
+	genTree_p->GetEntry(entry);
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	if(isPbPb && isRho) rhoTree_p->GetEntry(entry);
 	
@@ -1500,7 +1498,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	Float_t maxPhoPt = -1;
 	Float_t maxPhoEta = -100;
 	Float_t maxPhoPhi = -100;
-	/*
+	
 	const Int_t nMult_ = genPt_p->size();
 	
 	for(Int_t iter = 0; iter < nMult_; iter++){
@@ -1547,8 +1545,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	      maxPhoPhi = genPhi_p->at(iter);
 	    }
 	  }
-	  }*/
-		
+	}
+	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	
@@ -2136,6 +2134,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       	}
       }
       inFile_p->Close();
+      delete inFile_p;
     }
   }    
 
@@ -2548,6 +2547,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  }
 
 	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
+	  else FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 1, jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]);
+	    
 	  dir_p->cd();
 	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 
