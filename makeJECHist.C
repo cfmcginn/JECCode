@@ -22,6 +22,10 @@
 #include "include/returnRootFileContentsList.h"
 #include "include/getResidualJetCorr.h"
 
+const std::string storeStr = "/store";
+const std::string xrootdStr = "root://xrootd.unl.edu/";
+
+
 const Bool_t debugMode = false;
 
 const Bool_t doGetBkg = false;
@@ -378,7 +382,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   }
 
   const Int_t nFiles = 4;
-  const std::string inFileNames[nFiles] = {inFileName15, inFileName30, inFileName50, inFileName80};
+  std::string inFileNames[nFiles] = {inFileName15, inFileName30, inFileName50, inFileName80};
   const std::string inFilePtHats[nFiles] = {"pthat15", "pthat30", "pthat50", "pthat80"};
   const std::string inFilePtHats2[nFiles] = {"15", "30", "50", "80"};
   const Int_t pthatVals[nFiles+1] = {15, 30, 50, 80, 9999999};
@@ -400,10 +404,14 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
   for(Int_t iter = 0; iter < nFiles; iter++){
     if(isFile[iter]){
 
+      if(inFileNames[iter].substr(0, storeStr.size()).find(storeStr) != std::string::npos) inFileNames[iter] = xrootdStr + inFileNames[iter];
+
       if(inFileNames[iter].substr(inFileNames[iter].size()-5, 5).find(".root") != std::string::npos) listOfFiles[iter].push_back(inFileNames[iter]);
       else listOfFiles[iter] = returnFileList(inFileNames[iter], "HiForest", listOfFiles[iter].size());
     }
   }
+
+
 
   if(debugMode) std::cout << __LINE__ << std::endl;
 
