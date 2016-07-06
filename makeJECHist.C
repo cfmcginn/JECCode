@@ -513,7 +513,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
   
-  TFile* tempJetInFile_p = new TFile(tempJetFileName.c_str(), "READ");
+  TFile* tempJetInFile_p = TFile::Open(tempJetFileName.c_str(), "READ");
   const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "3PFJetAnalyzer");
 
   const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
