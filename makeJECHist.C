@@ -511,10 +511,17 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
     outName.replace(strIndex, inString2.length(), outString);
   }
 
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
   
   TFile* tempJetInFile_p = TFile::Open(tempJetFileName.c_str(), "READ");
   const std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "3PFJetAnalyzer");
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
   const Int_t nJetAlgo = (Int_t)jetAlgoInFile.size();
   std::cout << nJetAlgo << std::endl;
@@ -523,6 +530,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     jetAlgo.push_back(jetAlgoInFile.at(iter).substr(0, jetAlgoInFile.at(iter).find("JetAnalyzer")));
+
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
 
     for(Int_t rIter = 0; rIter < 10; rIter++){
       if(jetAlgo.at(iter).find(std::to_string(rIter)) != std::string::npos){
@@ -1276,12 +1286,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       //    std::cout << listOfFiles.at(fileIter).c_str() << std::endl;
 
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
-      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
-      TTree* rhoTree_p = (TTree*)inFile_p->Get("hiFJRhoAnalyzer/t");
+      //      TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
       if(debugMode) std::cout << __LINE__ << std::endl;
       
-      Bool_t isRho = true;
-      if(rhoTree_p == NULL) isRho = false;
       
       TTree* jetTree_p[nJetAlgo];
       
@@ -1302,6 +1309,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       hiTree_p->SetBranchAddress("run", &run_);
       hiTree_p->SetBranchAddress("evt", &evt_);
       
+      /*
       genTree_p->SetBranchStatus("*", 0);
       genTree_p->SetBranchStatus("pt", 1);
       genTree_p->SetBranchStatus("phi", 1);
@@ -1312,16 +1320,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       genTree_p->SetBranchAddress("phi", &genPhi_p);
       genTree_p->SetBranchAddress("eta", &genEta_p);
       genTree_p->SetBranchAddress("pdg", &genPDG_p);
-      
+      */
       
       if(debugMode) std::cout << __LINE__ << std::endl;
-      
-      if(isPbPb && isRho){
-	rhoTree_p->SetBranchStatus("*", 0);
-	rhoTree_p->SetBranchStatus("rho", 1);
-	
-	rhoTree_p->SetBranchAddress("rho", &rho_p);
-      }
       
       if(debugMode) std::cout << __LINE__ << std::endl;
       
@@ -1433,9 +1434,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	//      std::cout << "Gets here e" << std::endl;
 	
 	hiTree_p->GetEntry(entry);
-	genTree_p->GetEntry(entry);
+	//	genTree_p->GetEntry(entry);
 	if(debugMode) std::cout << __LINE__ << std::endl;
-	if(isPbPb && isRho) rhoTree_p->GetEntry(entry);
 	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
@@ -1443,17 +1443,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
 	if(TMath::Abs(vz_) > 15) continue;
 	
-	Float_t rhoVal = -1;
-	if(isPbPb && isRho) rhoVal = rho_p->at(3);
-	
-	if(isPbPb && isRho) centVRho_p->Fill(hiBin_/2, rhoVal);
-	
-	for(Int_t rhoIter = 0; rhoIter < nRhoCentBins; rhoIter++){
-	  if(hiBin_/2 > rhoCentBins[rhoIter] && hiBin_/2 < rhoCentBins[rhoIter+1]){
-	    centVRho_Proj_p[rhoIter]->Fill(rhoVal);
-	    break;
-	  }
-	}
 	
 	Float_t hibinWeight = 1;
 	if(doHibinWeight){
@@ -1472,18 +1461,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 	else centPos = 0;
-	
-	Int_t rhoPos = -1;
-	if(isPbPb){
-	  for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	    if(rhoVal > rhoBins[rhoIter] && rhoVal < rhoBins[rhoIter+1]){
-	      rhoPos = rhoIter;
-	      break;
-	    }
-	  }
-	}
-	else rhoPos = 0;
-	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	Float_t maxElePt = -1;
@@ -1506,8 +1483,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	Float_t maxPhoEta = -100;
 	Float_t maxPhoPhi = -100;
 	
-	const Int_t nMult_ = genPt_p->size();
-	
+	//	const Int_t nMult_ = genPt_p->size();
+	/*	
 	for(Int_t iter = 0; iter < nMult_; iter++){
 	  if(TMath::Abs(genPDG_p->at(iter)) != 11 && TMath::Abs(genPDG_p->at(iter)) != 13 && TMath::Abs(genPDG_p->at(iter)) != 22) continue;
 	  
@@ -1553,7 +1530,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    }
 	  }
 	}
-	
+	*/	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	
@@ -1692,7 +1669,7 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	    
 	    for(Int_t qgIter = 0; qgIter < 2; qgIter++){
 	      if(qgPos[qgIter] == -1) continue;
-	      
+
 	      jtRecoOverRawVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(jtPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/jtRawPt_[algoIter][jtIter]);
 	      
 	      for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
@@ -2011,11 +1988,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 		    
 		    //		    if(hiBin_ > 140) jtRecoOverGenVPt_PERP_MeanResPts_p[algoIter][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter], hibinWeight*qgWeight);
 		    
-		    if(rhoPos != -1){
-		      jtRecoOverGenVPt_Rho_MeanResPts_p[algoIter][rhoPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter/*recoPosJet[jtIter]*/]/*genJtPt_*//refPt_[algoIter][jtIter]);
-		    }
-		    //		  else std::cout << "Out of range rho: " << rho_p->at(3) << std::endl;
-		    
 		    jtRawOverGenVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtRawPt_[algoIter][jtIter/*recoPosJet[jtIter]*/]/*genJtPt_*//refPt_[algoIter][jtIter]);	
 		    
 		    jtRecoGenDRVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(tempDRFill);
@@ -2282,24 +2254,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  }
 
 
-	  if(centIter == 0){
-	    if(debugMode) std::cout << __LINE__ << std::endl;	  
-
-	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	      tempMean[0] = jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter]->GetMean();
-	      tempMeanErr[0] = jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter]->GetMeanError();	
-	      tempRes[0] = jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter]->GetStdDev();
-	      tempResErr[0] = jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter]->GetStdDevError();
-	      
-	      FitGauss(jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter], isPbPb, tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
-	      
-	      for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-		jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
-		jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
-	      }
-	    }
-	  }
-	  
 	  tempMean[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
 	  tempMeanErr[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();
 	  tempRes[0] = jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
@@ -2451,14 +2405,8 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
   localHibin_p->Write("", TObject::kOverwrite);
   hibinWeighted_p->Write("", TObject::kOverwrite);
-  centVRho_p->Write("", TObject::kOverwrite);
 
 
-  if(debugMode) std::cout << __LINE__ << std::endl;
-
-  for(Int_t rhoIter = 0; rhoIter < nRhoCentBins; rhoIter++){
-    centVRho_Proj_p[rhoIter]->Write("", TObject::kOverwrite);
-  }
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo.at(iter).c_str()));
@@ -2547,9 +2495,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
 	    jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	
-	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	      jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter]->Write("", TObject::kOverwrite);
-	    }
 	  }
 
 	  if(isPbPb) FitCSN2(jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter], 0, jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter]);
@@ -2594,12 +2539,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 
 	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
 	  jtRecoOverGenVRecoPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
-	  if(centIter == 0){
-	    //	    jtRecoOverGenVPt_PERP_MeanResPts_p[iter][qgIter][jtIter]->Write("", TObject::kOverwrite);
-	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	      jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
-	    }
-	  }
 	  jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
 	  jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
 
@@ -2646,12 +2585,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	}
       }
     }
-  }
-
-  delete centVRho_p;
-
-  for(Int_t rhoIter = 0; rhoIter < nRhoCentBins; rhoIter++){
-    delete centVRho_Proj_p[rhoIter];
   }
 
 
@@ -2718,9 +2651,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  if(centIter == 0){
 	    delete jtRecoOverGenVPt_PERP_Res_p[iter][qgIter][mIter];
 
-	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	      delete jtRecoOverGenVPt_Rho_Res_p[iter][rhoIter][qgIter][mIter];
-	    }
 	  }
 
 	  delete jtRecoOverRawVPt_Mean_p[iter][centIter][qgIter][mIter];
@@ -2755,12 +2685,6 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	  delete jtRecoGenDEtaVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
 	  delete jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
 	  delete jtRecoOverGenVRecoPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
-
-	  if(centIter == 0){
-	    for(Int_t rhoIter = 0; rhoIter < nRhoBins; rhoIter++){
-	      delete jtRecoOverGenVPt_Rho_MeanResPts_p[iter][rhoIter][qgIter][jtIter];
-	    } 
-	  }
 
 	  delete jtRecoOverRawVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
 	  delete jtRawOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];

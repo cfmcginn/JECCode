@@ -30,13 +30,13 @@ const std::string jetAlgo[nJetAlgo] = {"akPu3PF"/*, "akCs3PF"*/};
 //const std::string jetAlgo[nJetAlgo] = {"akVs4Calo", "akPu4Calo", "akVs4PF", "akPu4PF", "akVs3PF", "akPu3PF"};
 //const std::string jetAlgo[nJetAlgo] = {"ak4Calo", "ak3Calo", "ak4PF", "ak3PF"};
 
-const Int_t nCentBins = 4;
-const std::string centStrings[nCentBins] = {"cent50to100", "cent30to50", "cent10to30", "cent0to10"};
-const std::string centStrings2[nCentBins] = {"50-100%", "30-50%", "10-30%", "0-10%"};
+//const Int_t nCentBins = 4;
+//const std::string centStrings[nCentBins] = {"cent50to100", "cent30to50", "cent10to30", "cent0to10"};
+//const std::string centStrings2[nCentBins] = {"50-100%", "30-50%", "10-30%", "0-10%"};
 
-//const Int_t nCentBins = 2;
-//const std::string centStrings[nCentBins] = {"cent30to100", "cent0to30"};
-//const std::string centStrings2[nCentBins] = {"30-100%", "0-30%"};
+const Int_t nCentBins = 2;
+const std::string centStrings[nCentBins] = {"cent30to100", "cent0to30"};
+const std::string centStrings2[nCentBins] = {"30-100%", "0-30%"};
 
 //const Int_t nCentBins = 8;
 //const std::string centStrings[nCentBins] = {"cent70to100", "cent50to70", "cent40to50", "cent30to40", "cent20to30", "cent10to20", "cent5to10", "cent0to5"};
@@ -373,7 +373,14 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
     }
 
     th1Canv_p[dirIter]->DrawLegend();
+
+    if(ptEtaStr[ptEtaNum].find("Pt") != std::string::npos){
+      for(Int_t iter = 0; iter < nXPanel; iter++){
+	th1Canv_p[dirIter]->SetColumnLogX(iter); 
+      }
+    }
   }
+
   /*  
   for(Int_t iter = 0; iter < nTH1; iter++){
     std::string th1Name = th1Names_p->at(iter);
@@ -554,6 +561,7 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
       th1Canv_p[iter]->DrawGlobalHorizontalLine(1);
       th1Canv_p[iter]->DrawGlobalHorizontalLine(.95);
       th1Canv_p[iter]->DrawGlobalHorizontalLine(1.05);
+      th1Canv_p[iter]->DrawGlobalVerticalLine(30);
     }
 
     if(inHistName[inHistNum].find("Eff") != std::string::npos && meanResStr[meanResNum].find("Mean") != std::string::npos) th1Canv_p[iter]->DrawGlobalHorizontalLine(1);
