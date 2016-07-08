@@ -130,8 +130,8 @@ void makeJECPlotMeanRes(const std::string inFileName, const Int_t inHistNum, con
 	    if(name2.Index("Reco20") >= 0) continue;
 	    if(name2.Index("Reco30") >= 0) continue;
 
-	    if(name2.Index("Res") >= 0 && name2.Index("_Q_") >= 0) continue;
-	    if(name2.Index("Res") >= 0 && name2.Index("_G_") >= 0) continue;
+	    if(/*name2.Index("Res") >= 0 && */name2.Index("_Q_") >= 0) continue;
+	    if(/*name2.Index("Res") >= 0 && */name2.Index("_G_") >= 0) continue;
 
 	    //	    if(name2.Index("_Q_") >= 0) continue;
 	    //	    if(name2.Index("_G_") >= 0) continue;
