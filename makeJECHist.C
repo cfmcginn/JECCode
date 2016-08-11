@@ -413,9 +413,9 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
 	while(std::getline(file, tempFileStr)){
 	  if(tempFileStr.size() == 0) continue;
 
-	  if(tempFileStr.substr(tempFileStr.size()-5, 5).find(".root") != std::strin::npos) listOfFiles[iter].push_back(tempFileStr);
+	  if(tempFileStr.substr(tempFileStr.size()-5, 5).find(".root") != std::string::npos) listOfFiles[iter].push_back(tempFileStr);
 	}
-	file.close()
+	file.close();
       }
       else listOfFiles[iter] = returnFileList(inFileNames[iter], "HiForest", listOfFiles[iter].size());
     }
