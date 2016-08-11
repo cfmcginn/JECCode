@@ -407,11 +407,25 @@ void makeJECHist(const std::string inFileName15, const std::string inFileName30,
       if(inFileNames[iter].substr(0, storeStr.size()).find(storeStr) != std::string::npos) inFileNames[iter] = xrootdStr + inFileNames[iter];
 
       if(inFileNames[iter].substr(inFileNames[iter].size()-5, 5).find(".root") != std::string::npos) listOfFiles[iter].push_back(inFileNames[iter]);
+      else if(inFileNames[iter].substr(inFileNames[iter].size()-4, 4).find(".txt") != std::string::npos){
+	std::ifstream file(inFileNames[iter].c_str());
+	std::string tempFileStr;
+	while(std::getline(file, tempFileStr)){
+	  if(tempFileStr.size() == 0) continue;
+
+	  if(tempFileStr.substr(tempFileStr.size()-5, 5).find(".root") != std::strin::npos) listOfFiles[iter].push_back(tempFileStr);
+	}
+	file.close()
+      }
       else listOfFiles[iter] = returnFileList(inFileNames[iter], "HiForest", listOfFiles[iter].size());
+    }
+
+    for(Int_t iter2 = 0; iter2 < (Int_t)listOfFiles[iter].size(); iter2++){
+      if(listOfFiles[iter].at(iter2).substr(0, storeStr.size()).find(storeStr) != std::string::npos) listOfFiles[iter].at(iter2) = xrootdStr + listOfFiles[iter].at(iter2);
     }
   }
 
-
+  
 
   if(debugMode) std::cout << __LINE__ << std::endl;
 
