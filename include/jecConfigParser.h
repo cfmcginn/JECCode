@@ -16,6 +16,11 @@ class jecConfigParser{
   const std::string txtStr = ".txt";
   const std::string numStr = "0123456789";
   const std::string commaStr = ",";
+  const std::string alphaUpperStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const std::string alphaLowerStr = "abcdefghijklmnopqrstuvwxyz";
+  const static unsigned int nValidTrueFalse = 2;
+  const std::string validTrue[nValidTrueFalse] = {"true", "1"};
+  const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
   const static unsigned int nValidConfigVals = 4;
   const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB"};
@@ -25,12 +30,19 @@ class jecConfigParser{
   std::vector<std::string> inputStrings;
   bool isPbPb = false;
 
+  std::string returnLowerStr(std::string);
+  bool isTrueFalseStr(std::string);
+  bool parseTrueFalseStr(std::string);
+
  public:
   jecConfigParser();
   jecConfigParser(const std::string);
   bool SetConfigParser(const std::string);
+  void ResetConfigParser();
   unsigned int GetNPthats();
   void PrintPthats();
+  void PrintInputs();
+  bool GetIsPbPb();
 };
 
 jecConfigParser::jecConfigParser()
@@ -169,35 +181,112 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	valStr.replace(0, valStr.find(",")+1, "");
       }
       if(valStr.size() != 0) pthats.push_back((unsigned int)std::stoi(valStr));
-    } 
+    }
+
+    if(tempStr.substr(0, validConfigVals[2].size()).find(validConfigVals[2]) != std::string::npos){
+      inputStrings.push_back(valStr);
+    }
+
+    if(tempStr.substr(0, validConfigVals[3].size()).find(validConfigVals[3]) != std::string::npos){
+      if(!isTrueFalseStr(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Please give \'TRUE\' or \'FALSE\'. Return false" << std::endl;
+	
+	ResetConfigParser();
+
+	return false;
+      }
+
+      if(parseTrueFalseStr(valStr)) isPbPb = true;
+      else isPbPb = false;
+    }
   }
 
   if(nPthats == 0){
-    pthats.clear();
-    inputStrings.clear();
-    isPbPb = false;
+    ResetConfigParser();
     return false;
   }
   if(pthats.size() != nPthats){
     std::cout << "NPTHAT, \'" << nPthats << "\', does not match PTHAT size, \'" << pthats.size() << "\'. Return false." << std::endl;
-    nPthats = 0;
-    pthats.clear();
-    inputStrings.clear();
-    isPbPb = false;
+    
+    ResetConfigParser();
+
     return false;
   }
-  /*
+  
   if(inputStrings.size() != nPthats){
-    nPthats = 0;
-    pthats.clear();
-    inputStrings.clear();
-    isPbPb = false;
+    std::cout << "NPTHAT, \'" << nPthats << "\', does not match INPUT size, \'" << inputStrings.size() << "\'. Return false." << std::endl;
+
+    ResetConfigParser();
+
     return false;
   }
-  */
+  
+
+  unsigned int tempIter = 0;
+  while(tempIter < pthats.size()){
+    bool doSwap = false;
+    
+    for(unsigned int iter2 = tempIter+1; iter2 < pthats.size(); iter2++){
+      if(pthats.at(tempIter) > pthats.at(iter2)){
+	unsigned int tempPthat = pthats.at(tempIter);
+	pthats.at(tempIter) = pthats.at(iter2);
+	pthats.at(iter2) = tempPthat;
+
+	doSwap = true;
+      }
+    }
+
+    if(!doSwap) tempIter++;
+  }
+
+  for(unsigned int pthatIter = 0; pthatIter < nPthats; pthatIter++){
+    bool pthatIsFound = false;
+    std::string findStr = std::to_string(pthats.at(pthatIter)) + ",";
+
+    for(unsigned int pthatIter2 = 0; pthatIter2 < nPthats; pthatIter2++){
+      if(inputStrings.at(pthatIter2).find(findStr) != std::string::npos){
+	std::string tempStr = inputStrings.at(pthatIter2);
+	inputStrings.at(pthatIter2) = inputStrings.at(pthatIter); 
+	inputStrings.at(pthatIter) = tempStr;
+	pthatIsFound = true;
+      }
+    }
+
+    if(!pthatIsFound){
+      std::cout << "No INPUT found for PTHAT \'" << pthats.at(pthatIter) << "\'. The following are given:" << std::endl;
+      PrintInputs();
+      std::cout << "Please give input in form \'PTHAT,FILENAME\'. Return false" << std::endl;
+      
+      ResetConfigParser();
+
+      return false;
+    }
+  }
+
+  for(unsigned int pthatIter = 0; pthatIter < nPthats; pthatIter++){
+    inputStrings.at(pthatIter).replace(0, inputStrings.at(pthatIter).find(",")+1, "");
+    if(!checkFile(inputStrings.at(pthatIter))){
+      std::cout << "INPUT \'" << inputStrings.at(pthatIter) << "\' given for PTHAT==" << pthats.at(pthatIter) << " is not a valid file. Return false" << std::endl;
+
+      ResetConfigParser();
+
+      return false;
+    }
+  }
 
   return true;
 }
+
+void jecConfigParser::ResetConfigParser()
+{
+  nPthats = 0;
+  pthats.clear();
+  inputStrings.clear();
+  isPbPb = false;
+
+  return;
+}
+
 
 unsigned int jecConfigParser::GetNPthats(){return nPthats;}
 
@@ -213,6 +302,59 @@ void jecConfigParser::PrintPthats()
   std::cout << std::endl;
 
   return;
+}
+
+void jecConfigParser::PrintInputs()
+{
+  std::cout << "Inputs:" << std::endl;
+
+  for(unsigned int iter = 0; iter < nPthats; iter++){
+    std::cout << " Input " << iter << "/" << nPthats << ": " << inputStrings.at(iter) << std::endl;
+  }
+
+  return;
+}
+
+
+bool jecConfigParser::GetIsPbPb(){return isPbPb;}
+
+//begin private functions
+std::string jecConfigParser::returnLowerStr(std::string inStr)
+{
+  for(unsigned int iter = 0; iter < inStr.size(); iter++){
+    for(unsigned int iter2 = 0; iter2 < alphaUpperStr.size(); iter2++){
+      if(inStr.substr(iter, 1).find(alphaUpperStr.at(iter2)) != std::string::npos){
+        inStr.replace(iter, 1, alphaLowerStr.substr(iter2, 1));
+        break;
+      }
+    }
+  }
+
+  return inStr;
+}
+
+bool jecConfigParser::isTrueFalseStr(std::string trueFalseStr)
+{
+  trueFalseStr = returnLowerStr(trueFalseStr);
+
+  for(unsigned int iter = 0; iter < nValidTrueFalse; iter++){
+    if(validTrue[iter].size() == trueFalseStr.size() && validTrue[iter].find(trueFalseStr) != std::string::npos) return true;
+    if(validFalse[iter].size() == trueFalseStr.size() && validFalse[iter].find(trueFalseStr) != std::string::npos) return true;
+  }
+
+  return false;
+}
+
+bool jecConfigParser::parseTrueFalseStr(std::string trueFalseStr)
+{
+  trueFalseStr = returnLowerStr(trueFalseStr);
+  for(unsigned int iter = 0; iter < nValidTrueFalse; iter++){
+    if(validTrue[iter].size() == trueFalseStr.size() && validTrue[iter].find(trueFalseStr) != std::string::npos) return true;
+    if(validFalse[iter].size() == trueFalseStr.size() && validFalse[iter].find(trueFalseStr) != std::string::npos)return false;
+  }
+
+  std::cout << "Input \'" << trueFalseStr << "\' is invalid. Auto-return false. Please debug." << std::endl;
+  return false;
 }
 
 #endif
