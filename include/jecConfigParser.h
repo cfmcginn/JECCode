@@ -16,19 +16,25 @@ class jecConfigParser{
   const std::string txtStr = ".txt";
   const std::string numStr = "0123456789";
   const std::string commaStr = ",";
+  const std::string dotStr = ".";
   const std::string alphaUpperStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const std::string alphaLowerStr = "abcdefghijklmnopqrstuvwxyz";
   const static unsigned int nValidTrueFalse = 2;
   const std::string validTrue[nValidTrueFalse] = {"true", "1"};
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
-  const static unsigned int nValidConfigVals = 4;
-  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB"};
+  const static unsigned int nValidConfigVals = 8;
+  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS"};
 
   unsigned int nPthats = 0;
   std::vector<unsigned int> pthats;
   std::vector<std::string> inputStrings;
   bool isPbPb = false;
+
+  unsigned int nJtPtBins = 0;
+  float jtPtLow = 30.;
+  float jtPtHi = 100.;
+  bool doJtPtLogBins = false;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -40,9 +46,15 @@ class jecConfigParser{
   bool SetConfigParser(const std::string);
   void ResetConfigParser();
   unsigned int GetNPthats();
+  unsigned int GetPthat(const unsigned int);
   void PrintPthats();
   void PrintInputs();
+  std::string GetInput(const unsigned int);
   bool GetIsPbPb();
+  unsigned int GetNJtPtBins();
+  float GetJtPtLow();
+  float GetJtPtHi();
+  bool GetDoJtPtLogBins();
 };
 
 jecConfigParser::jecConfigParser()
@@ -199,6 +211,94 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       if(parseTrueFalseStr(valStr)) isPbPb = true;
       else isPbPb = false;
     }
+
+    if(tempStr.substr(0, validConfigVals[4].size()).find(validConfigVals[4]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
+	nJtPtBins = 0;
+	continue;
+      }
+      else if(valStr.find(".") != std::string::npos){ // check if integer
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Setting to 0" << std::endl;
+        nJtPtBins = 0;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to 0" << std::endl;
+	nJtPtBins = 0;
+	continue;
+      }
+      // setting
+      nJtPtBins = (unsigned int)std::stoi(valStr);
+    }
+
+
+    if(tempStr.substr(0, validConfigVals[5].size()).find(validConfigVals[5]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtPtLow = 30.;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	jtPtLow = 30.;
+	continue;
+      }
+      // setting
+      jtPtLow = std::stof(valStr);
+    }
+
+    if(tempStr.substr(0, validConfigVals[6].size()).find(validConfigVals[6]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtPtHi = 100.;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	jtPtHi = 100.;
+	continue;
+      }
+      // setting
+      jtPtHi = std::stof(valStr);
+    }
+
+    if(tempStr.substr(0, validConfigVals[7].size()).find(validConfigVals[7]) != std::string::npos){
+      if(!isTrueFalseStr(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
+	
+	doJtPtLogBins = false;
+
+	continue;
+      }
+
+      if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
+      else doJtPtLogBins = false;
+    }    
   }
 
   if(nPthats == 0){
@@ -274,6 +374,21 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
   }
 
+  if(0 == nJtPtBins){
+    std::cout << "NJTPTBINS, \'" << nJtPtBins << "\', is not a valid value. Return false." << std::endl;
+
+    ResetConfigParser();
+
+    return false;
+  }
+
+  if(jtPtLow >= jtPtHi){
+    std::cout << "JTPTLOW, \'" << jtPtLow << "\', is greater than JTPTHI, \'" << jtPtHi << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
   return true;
 }
 
@@ -283,12 +398,28 @@ void jecConfigParser::ResetConfigParser()
   pthats.clear();
   inputStrings.clear();
   isPbPb = false;
-
+  nJtPtBins = 0;
+  jtPtLow = 30.;
+  jtPtHi = 100.;
+  doJtPtLogBins = false;
+  
   return;
 }
 
 
 unsigned int jecConfigParser::GetNPthats(){return nPthats;}
+
+
+unsigned int jecConfigParser::GetPthat(unsigned int pos)
+{
+  if(pos >= nPthats){
+    std::cout << "Requested input position, \'" << pos << "\', is >= nPthats, \'" << nPthats << "\'. Return 0" << std::endl;
+    return 0;
+  }
+  
+  return pthats.at(pos);
+}
+
 
 void jecConfigParser::PrintPthats()
 {
@@ -315,8 +446,23 @@ void jecConfigParser::PrintInputs()
   return;
 }
 
+std::string jecConfigParser::GetInput(unsigned int pos)
+{
+  if(pos >= nPthats){
+    std::cout << "Requested input position, \'" << pos << "\', is >= nPthats, \'" << nPthats << "\'. Return empty string" << std::endl;
+    return "";
+  }
+  
+  return inputStrings.at(pos);
+}
+
 
 bool jecConfigParser::GetIsPbPb(){return isPbPb;}
+
+unsigned int jecConfigParser::GetNJtPtBins(){return nJtPtBins;}
+float jecConfigParser::GetJtPtLow(){return jtPtLow;}
+float jecConfigParser::GetJtPtHi(){return jtPtHi;}
+bool jecConfigParser::GetDoJtPtLogBins(){return doJtPtLogBins;}
 
 //begin private functions
 std::string jecConfigParser::returnLowerStr(std::string inStr)
