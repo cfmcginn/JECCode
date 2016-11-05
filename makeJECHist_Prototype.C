@@ -402,6 +402,8 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	  if(TMath::Abs(refEta_[algoIter][jtIter]) > 4.9) continue;
 	  if(refPt_[algoIter][jtIter] < 5.0) continue;
 	  if(refSubID_[algoIter][jtIter] != 0) continue;
+
+	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter]) < .1) continue;
 	  
 	  Int_t qgPos[2] = {0, -1};
 	  if(TMath::Abs(refPartFlav_[algoIter][jtIter]) < 9) qgPos[1] = 1;

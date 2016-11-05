@@ -6,7 +6,10 @@
 #include <vector>
 #include <fstream>
 
+#include "include/doGlobalDebug.h"
 #include "include/checkMakeDir.h"
+#include "include/getLogBins.h"
+#include "include/getLinBins.h"
 
 //root headers
 
@@ -23,8 +26,8 @@ class jecConfigParser{
   const std::string validTrue[nValidTrueFalse] = {"true", "1"};
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
-  const static unsigned int nValidConfigVals = 8;
-  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS"};
+  const static unsigned int nValidConfigVals = 11;
+  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS", "DOWEIGHTS", "DOPTHATSTAGGER", "STAGGEROFFSET"};
 
   unsigned int nPthats = 0;
   std::vector<unsigned int> pthats;
@@ -35,6 +38,10 @@ class jecConfigParser{
   float jtPtLow = 30.;
   float jtPtHi = 100.;
   bool doJtPtLogBins = false;
+
+  bool doWeights = false;
+  bool doPthatStagger = true;
+  float staggerOffset = 20.;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -55,6 +62,9 @@ class jecConfigParser{
   float GetJtPtLow();
   float GetJtPtHi();
   bool GetDoJtPtLogBins();
+  bool GetDoWeights();
+  bool GetDoPthatStagger();
+  float GetJtWeight(const unsigned int, const float);
 };
 
 jecConfigParser::jecConfigParser()
@@ -256,7 +266,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	}
       }
       if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
 	jtPtLow = 30.;
 	continue;
       }
@@ -279,7 +289,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	}
       }
       if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
 	jtPtHi = 100.;
 	continue;
       }
@@ -299,6 +309,55 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
       else doJtPtLogBins = false;
     }    
+
+    if(tempStr.substr(0, validConfigVals[8].size()).find(validConfigVals[8]) != std::string::npos){
+      if(!isTrueFalseStr(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
+	
+	doWeights = false;
+
+	continue;
+      }
+
+      if(parseTrueFalseStr(valStr)) doWeights = true;
+      else doWeights = false;
+    }
+
+    if(tempStr.substr(0, validConfigVals[9].size()).find(validConfigVals[9]) != std::string::npos){
+      if(!isTrueFalseStr(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to true. Return true" << std::endl;
+	
+	doPthatStagger = true;
+
+	continue;
+      }
+
+      if(parseTrueFalseStr(valStr)) doPthatStagger = true;
+      else doPthatStagger = false;
+    }
+
+    if(tempStr.substr(0, validConfigVals[10].size()).find(validConfigVals[10]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	staggerOffset = 20.;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
+	staggerOffset = 20.;
+	continue;
+      }
+      // setting
+      staggerOffset = std::stof(valStr);
+    }
   }
 
   if(nPthats == 0){
@@ -389,6 +448,14 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
+  if((doWeights && doPthatStagger) || (!doWeights && !doPthatStagger)){
+    std::cout << "DOWEIGHTS, \'" << doWeights << "\', and DOPTHATSTAGGER, \'" << doPthatStagger << "\', both have same value. Please choose one. Return false." << std::endl;
+
+    ResetConfigParser();
+
+    return false;
+  }
+
   return true;
 }
 
@@ -402,7 +469,9 @@ void jecConfigParser::ResetConfigParser()
   jtPtLow = 30.;
   jtPtHi = 100.;
   doJtPtLogBins = false;
-  
+  doWeights = false;
+  doPthatStagger = true;
+
   return;
 }
 
@@ -463,6 +532,56 @@ unsigned int jecConfigParser::GetNJtPtBins(){return nJtPtBins;}
 float jecConfigParser::GetJtPtLow(){return jtPtLow;}
 float jecConfigParser::GetJtPtHi(){return jtPtHi;}
 bool jecConfigParser::GetDoJtPtLogBins(){return doJtPtLogBins;}
+bool jecConfigParser::GetDoWeights(){return doWeights;}
+bool jecConfigParser::GetDoPthatStagger(){return doPthatStagger;}
+
+float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt)
+{
+  if(jtPt < jtPtLow || jtPt > jtPtHi) return 0.;
+
+  float weight = 1.;
+
+  int jtPtBinPthatPos[nJtPtBins+1];
+  double jtPtBins[nJtPtBins+1];
+  if(doJtPtLogBins) getLogBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
+  else getLinBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
+
+  if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
+
+  for(unsigned int iter = 0; iter < nJtPtBins; iter++){
+    jtPtBinPthatPos[iter] = -1;
+    
+    for(unsigned iter2 = 0; iter2 < nPthats-1; iter2++){
+      if(pthats.at(iter2)+staggerOffset <= jtPtBins[iter] && pthats.at(iter2+1)+staggerOffset > jtPtBins[iter]){
+	jtPtBinPthatPos[iter] = (int)iter2;
+	break;
+      }
+    }
+    if(jtPtBinPthatPos[iter] == -1 && pthats.at(nPthats-1)+staggerOffset <= jtPtBins[iter]) jtPtBinPthatPos[iter] = nPthats-1;
+  }
+
+  if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
+  
+  int jtPtPos = -1;
+
+  if(doWeights) weight = 1.;
+  else if(doPthatStagger){
+    for(unsigned int iter = 0; iter < nJtPtBins; iter++){
+      if(jtPt > jtPtBins[iter] && jtPt < jtPtBins[iter+1]){
+	jtPtPos = iter;
+	break;
+      }
+    }
+
+    if(jtPtBinPthatPos[jtPtPos] < 0) weight = 0.;
+    else if((unsigned int)jtPtBinPthatPos[jtPtPos] != pthatPos) weight = 0.;
+    else weight = 1.;    
+  }
+
+  if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
+
+  return weight;
+}
 
 //begin private functions
 std::string jecConfigParser::returnLowerStr(std::string inStr)
@@ -502,5 +621,6 @@ bool jecConfigParser::parseTrueFalseStr(std::string trueFalseStr)
   std::cout << "Input \'" << trueFalseStr << "\' is invalid. Auto-return false. Please debug." << std::endl;
   return false;
 }
+
 
 #endif
