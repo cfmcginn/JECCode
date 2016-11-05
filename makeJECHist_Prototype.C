@@ -85,7 +85,7 @@ void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtE
 }
 
 
-void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr)
+void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr)
 {
   if(hist_p->Integral() == 0) return;
   if(hist_p->GetEntries() == 0) return;
@@ -101,7 +101,7 @@ void FitGauss(TH1F* hist_p, Bool_t isPbPb, Float_t& mean, Float_t& meanErr, Floa
   resErr = f1_p->GetParError(2);
 
   //  if(f1_p->GetProb() > .01) return;
-  if(!isPbPb) return;
+  //if(!isPbPb) return;
 
   //  return;
 
@@ -262,6 +262,9 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   if(config.GetDoJtPtLogBins()) getLogBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
   else getLinBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
 
+
+  const unsigned int nPtHats = config.GetNPthats();
+  TH1F* genJtPtPerPthat_p[nJetAlgo][nCentBins][nQG][nPtHats];
   TH2F* jtRecoVGen_p[nJetAlgo][nCentBins][nQG];
   TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins][nQG];
   TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins][nQG][nMeanFit];
@@ -277,6 +280,11 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	
 	jtRecoOverGenVPt_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoOverGenVPt_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; (Reco. %s Jet p_{T})/(Gen. Jet p_{T})", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, 30, 0, 3);
 	
+	for(unsigned int pthatIter = 0; pthatIter < nPtHats; pthatIter++){
+	  std::string nameGenJtPtPerPthat = "genJtPtPerPthat_" + qg[qgIter] + "_" + jetAlgo.at(iter) + "_" + centStr + "_Pthat" + std::to_string(config.GetPthat(pthatIter)) + "_h";
+	  genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter] = new TH1F(nameGenJtPtPerPthat.c_str(), ";Gen. Jet p_{T};Events", nJtPtBins, jtPtBins);
+	}
+
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 	}
@@ -293,7 +301,7 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	  Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
 	  Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
 	  
-	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 45, 0, 3);
+	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 99, 0, 3);
 	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Sumw2();
 	}
       }
@@ -422,6 +430,15 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	    }
 	  }
 	}
+
+	for(Int_t jtIter = 0; jtIter < nGenJt_[algoIter]; jtIter++){
+	  if(TMath::Abs(genJtEta_[algoIter][jtIter]) > 4.9) continue;
+	  if(genJtPt_[algoIter][jtIter] < 5.0) continue;
+          if(config.GetJtWeight(pthatIter, genJtPt_[algoIter][jtIter]) < .1) continue;
+	  
+	  genJtPtPerPthat_p[algoIter][centPos][0][pthatIter]->Fill(genJtPt_[algoIter][jtIter]);
+	}
+
       }
     }
     inFile_p->Close();
@@ -441,7 +458,7 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	  tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
 	  tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
 	  
-	  FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], config.GetIsPbPb(), tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
+	  FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
 	
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	    jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
@@ -455,11 +472,6 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   }
 
   outFile_p->cd();
-
-  for(unsigned int iter = 0; iter < config.GetNPthats(); iter++){
-    TNamed pathStr(Form("pathStr_%s", std::to_string(config.GetPthat(iter)).c_str()), config.GetInput(iter).c_str());
-		   pathStr.Write("", TObject::kOverwrite);
-  }
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo.at(iter).c_str()));
@@ -477,6 +489,10 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	jtRecoVGen_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 	jtRecoOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 
+	for(unsigned int pthatIter = 0; pthatIter < nPtHats; pthatIter++){
+	  genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter]->Write("", TObject::kOverwrite);
+	}
+
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
@@ -489,12 +505,18 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
     }
   }
 
+  config.WriteConfigParamsToRootFile(outFile_p);
+
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	delete jtRecoVGen_p[iter][centIter][qgIter];
 	delete jtRecoOverGenVPt_p[iter][centIter][qgIter];
+
+        for(unsigned int pthatIter = 0; pthatIter < nPtHats; pthatIter++){
+          delete genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter];
+        }
 
 	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	  delete jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter];

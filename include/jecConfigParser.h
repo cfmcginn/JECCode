@@ -1,17 +1,22 @@
 #ifndef JECCONFIGPARSER_H
 #define JECCONFIGPARSER_H
 
+//c standard
 #include <iostream> 
 #include <string>
 #include <vector>
 #include <fstream>
 
+//root headers
+#include "TFile.h"
+#include "TNamed.h"
+#include "TDirectory.h"
+
+//include headers
 #include "include/doGlobalDebug.h"
 #include "include/checkMakeDir.h"
 #include "include/getLogBins.h"
 #include "include/getLinBins.h"
-
-//root headers
 
 class jecConfigParser{
  private:
@@ -28,6 +33,10 @@ class jecConfigParser{
 
   const static unsigned int nValidConfigVals = 11;
   const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS", "DOWEIGHTS", "DOPTHATSTAGGER", "STAGGEROFFSET"};
+
+  const std::string defaultConfigInputs[nValidConfigVals] = {"", "", "", "FALSE", "", "30", "100", "FALSE", "FALSE", "TRUE", "20"};
+  std::string configInputs[nValidConfigVals] = {"", "", "", "", "", "", "", "", "", "", ""};
+  std::string configFileName = "";
 
   unsigned int nPthats = 0;
   std::vector<unsigned int> pthats;
@@ -52,6 +61,7 @@ class jecConfigParser{
   jecConfigParser(const std::string);
   bool SetConfigParser(const std::string);
   void ResetConfigParser();
+  std::string GetConfigFileName();
   unsigned int GetNPthats();
   unsigned int GetPthat(const unsigned int);
   void PrintPthats();
@@ -65,6 +75,7 @@ class jecConfigParser{
   bool GetDoWeights();
   bool GetDoPthatStagger();
   float GetJtWeight(const unsigned int, const float);
+  void WriteConfigParamsToRootFile(TFile*);
 };
 
 jecConfigParser::jecConfigParser()
@@ -99,6 +110,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     std::cout << "Input jecConfig txt file, \'" << inConfigFile << "\', doesn't end in \'.txt\'. return false" << std::endl;
     return false;
   }
+
+  configFileName = inConfigFile;
 
   std::ifstream inFile(inConfigFile.c_str());
   std::string tempStr;
@@ -165,11 +178,13 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       }
       // setting
       nPthats = (unsigned int)std::stoi(valStr);
-    
+      configInputs[0] = valStr;    
+
       // finally check its below class cap
       if(nPthats > nMaxPtHat){
 	std::cout << tempStr << " value \'" << valStr << "\' is greater than class cap \'" << nMaxPtHat << "\'. Consider raising cap or using fewer pthats. Setting to 0." << std::endl;
 	nPthats = 0;
+	valStr = "";
       }
     }
     if(tempStr.substr(0, validConfigVals[1].size()).find(validConfigVals[1]) != std::string::npos){
@@ -217,6 +232,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
 	return false;
       }
+      
+      configInputs[3] = valStr;
 
       if(parseTrueFalseStr(valStr)) isPbPb = true;
       else isPbPb = false;
@@ -247,6 +264,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
+      configInputs[4] = valStr;
       nJtPtBins = (unsigned int)std::stoi(valStr);
     }
 
@@ -271,6 +289,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
+      configInputs[5] = valStr;
       jtPtLow = std::stof(valStr);
     }
 
@@ -294,6 +313,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
+      configInputs[6] = valStr;
       jtPtHi = std::stof(valStr);
     }
 
@@ -305,6 +325,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
 	continue;
       }
+
+      configInputs[7] = valStr;
 
       if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
       else doJtPtLogBins = false;
@@ -319,6 +341,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
 
+      configInputs[8] = valStr;
+
       if(parseTrueFalseStr(valStr)) doWeights = true;
       else doWeights = false;
     }
@@ -326,11 +350,13 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[9].size()).find(validConfigVals[9]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to true. Return true" << std::endl;
-	
+
 	doPthatStagger = true;
 
 	continue;
       }
+
+      configInputs[9] = valStr;	
 
       if(parseTrueFalseStr(valStr)) doPthatStagger = true;
       else doPthatStagger = false;
@@ -356,6 +382,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
+      configInputs[10] = valStr;
       staggerOffset = std::stof(valStr);
     }
   }
@@ -461,6 +488,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
 void jecConfigParser::ResetConfigParser()
 {
+  configFileName = "";
   nPthats = 0;
   pthats.clear();
   inputStrings.clear();
@@ -471,13 +499,17 @@ void jecConfigParser::ResetConfigParser()
   doJtPtLogBins = false;
   doWeights = false;
   doPthatStagger = true;
+  staggerOffset = 20.;
 
+  for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+    configInputs[iter] = defaultConfigInputs[iter];
+  }
+      
   return;
 }
 
-
+std::string jecConfigParser::GetConfigFileName(){return configFileName;}
 unsigned int jecConfigParser::GetNPthats(){return nPthats;}
-
 
 unsigned int jecConfigParser::GetPthat(unsigned int pos)
 {
@@ -582,6 +614,57 @@ float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt
 
   return weight;
 }
+
+void jecConfigParser::WriteConfigParamsToRootFile(TFile* writeFile_p)
+{
+  writeFile_p->cd();
+  
+  TDirectory* dir_p = writeFile_p->GetDirectory("configParamsDir");
+  if(dir_p){
+    dir_p->cd();
+  }
+  else{
+    dir_p = writeFile_p->mkdir("configParamsDir");
+    dir_p->cd();
+  }
+  
+  TNamed nameStr("ConfigFileName", configFileName.c_str());
+  nameStr.Write("", TObject::kOverwrite);
+
+  for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+    if(validConfigVals[iter].find("PTHAT") != std::string::npos && validConfigVals[iter].size() == 5){
+      std::string firstStr = "PTHAT";
+      std::string secondStr = "";
+      for(unsigned int iter2 = 0; iter2 < nPthats-1; iter2++){
+	secondStr = secondStr + std::to_string(pthats.at(iter2)) + ", ";
+      }
+      if(nPthats != 0) secondStr = secondStr + std::to_string(pthats.at(nPthats-1));
+
+      TNamed configStr(firstStr.c_str(), secondStr.c_str());
+      configStr.Write("", TObject::kOverwrite);
+    }
+    else if(validConfigVals[iter].find("INPUT") != std::string::npos && validConfigVals[iter].size() == 5){
+      for(unsigned int iter2 = 0; iter2 < nPthats; iter2++){
+	std::string firstStr = "INPUT_PTHAT" + std::to_string(pthats.at(iter2));
+	std::string secondStr = inputStrings.at(iter2);
+
+	TNamed configStr(firstStr.c_str(), secondStr.c_str());
+	configStr.Write("", TObject::kOverwrite);
+      }
+    }
+    else{
+      std::string configInputToWrite = configInputs[iter];
+      if(configInputToWrite.size() == 0) configInputToWrite = defaultConfigInputs[iter];
+      TNamed configStr(validConfigVals[iter].c_str(), configInputToWrite.c_str());
+      configStr.Write("", TObject::kOverwrite);
+    }
+  }
+
+  writeFile_p->cd();
+
+  return;
+}
+
 
 //begin private functions
 std::string jecConfigParser::returnLowerStr(std::string inStr)
