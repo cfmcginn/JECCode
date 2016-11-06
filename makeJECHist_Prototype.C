@@ -193,7 +193,7 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   TFile* outFile_p = new TFile(outName.c_str(), "RECREATE");
   
   TFile* tempJetInFile_p = TFile::Open(config.GetInput(0).c_str(), "READ");
-  std::vector<std::string> jetAlgoInFile = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+  std::vector<std::string> jetAlgoInFile = config.GetJetTypesFinal();
   tempJetInFile_p->Close();
 
   Int_t jetAlgoCheck = 0;

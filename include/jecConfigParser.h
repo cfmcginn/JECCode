@@ -11,12 +11,15 @@
 #include "TFile.h"
 #include "TNamed.h"
 #include "TDirectory.h"
+#include "TFile.h"
 
 //include headers
 #include "include/doGlobalDebug.h"
 #include "include/checkMakeDir.h"
 #include "include/getLogBins.h"
 #include "include/getLinBins.h"
+#include "include/returnRootFileContentsList.h"
+
 
 class jecConfigParser{
  private:
@@ -31,17 +34,26 @@ class jecConfigParser{
   const std::string validTrue[nValidTrueFalse] = {"true", "1"};
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
-  const static unsigned int nValidConfigVals = 11;
-  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS", "DOWEIGHTS", "DOPTHATSTAGGER", "STAGGEROFFSET"};
 
-  const std::string defaultConfigInputs[nValidConfigVals] = {"", "", "", "FALSE", "", "30", "100", "FALSE", "FALSE", "TRUE", "20"};
-  std::string configInputs[nValidConfigVals] = {"", "", "", "", "", "", "", "", "", "", ""};
+  const static unsigned int nValidConfigVals = 12;
+  enum configIter {NPTHAT, PTHAT, INPUT, ISPBPB, JETTYPES, NJTPTBINS, JTPTLOW, JTPTHI, DOJTPTLOGBINS, DOWEIGHTS, DOPTHATSTAGGER, STAGGEROFFSET};
+  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "JETTYPES", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS", "DOWEIGHTS", "DOPTHATSTAGGER", "STAGGEROFFSET"};
+
+  const std::string defaultConfigInputs[nValidConfigVals] = {"", "", "", "FALSE", "", "", "30", "100", "FALSE", "FALSE", "TRUE", "20"};
+  unsigned int nConfigInputs[nValidConfigVals] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  std::string configInputs[nValidConfigVals] = {"", "", "", "", "", "", "", "", "", "", "", ""};
   std::string configFileName = "";
+  
 
   unsigned int nPthats = 0;
   std::vector<unsigned int> pthats;
   std::vector<std::string> inputStrings;
   bool isPbPb = false;
+
+  std::string jetTypes = "";
+  std::vector<std::string> jetTypesKeep;
+  std::vector<std::string> jetTypesRemove;
+  std::vector<std::string> jetTypesFinal;
 
   unsigned int nJtPtBins = 0;
   float jtPtLow = 30.;
@@ -68,6 +80,11 @@ class jecConfigParser{
   void PrintInputs();
   std::string GetInput(const unsigned int);
   bool GetIsPbPb();
+  std::string GetJetTypes();
+  void PrintJetTypesKeep();
+  void PrintJetTypesRemove();
+  void PrintJetTypesFinal();
+  std::vector<std::string> GetJetTypesFinal();
   unsigned int GetNJtPtBins();
   float GetJtPtLow();
   float GetJtPtHi();
@@ -125,10 +142,21 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
     //skip invalid inputs and print skip
     bool isValid = false;
-    for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
-      if(tempStr.substr(0, validConfigVals[iter].size()).find(validConfigVals[iter]) != std::string::npos && tempStr.find("=") != std::string::npos){
-	isValid = true;
-	break;
+    if(tempStr.find("=") != std::string::npos){
+      std::string tempStr2 = tempStr.substr(0, tempStr.find("="));
+      while(tempStr2.find(" ") != std::string::npos){
+	tempStr2.replace(tempStr2.find(" "), 1, "");
+      }
+
+      for(unsigned int iter = 0; iter < tempStr2.size(); iter++){
+	if(alphaLowerStr.find(tempStr2.at(iter)) != std::string::npos) tempStr2.replace(iter, 1, alphaUpperStr.substr(alphaLowerStr.find(tempStr2.at(iter)), 1));
+      }
+
+      for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+	if(tempStr2.find(validConfigVals[iter]) != std::string::npos && tempStr2.size() == validConfigVals[iter].size()){
+	  isValid = true;
+	  break;
+	}
       }
     }
     
@@ -152,7 +180,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     std::string valStr = tempStr.substr(tempStr.find("=")+1, tempStr.size() - tempStr.find("=")+1);
     tempStr.replace(tempStr.find("="), tempStr.size() - tempStr.find("="), "");
 
-    if(tempStr.substr(0, validConfigVals[0].size()).find(validConfigVals[0]) != std::string::npos){
+    for(unsigned int iter = 0; iter < tempStr.size(); iter++){
+      if(alphaLowerStr.find(tempStr.at(iter)) != std::string::npos) tempStr.replace(iter, 1, alphaUpperStr.substr(alphaLowerStr.find(tempStr.at(iter)), 1));
+    }
+
+
+    if(tempStr.substr(0, validConfigVals[NPTHAT].size()).find(validConfigVals[NPTHAT]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
 	nPthats = 0;
@@ -178,7 +211,6 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       }
       // setting
       nPthats = (unsigned int)std::stoi(valStr);
-      configInputs[0] = valStr;    
 
       // finally check its below class cap
       if(nPthats > nMaxPtHat){
@@ -186,8 +218,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	nPthats = 0;
 	valStr = "";
       }
+      else{
+	configInputs[NPTHAT] = valStr;
+	nConfigInputs[NPTHAT]++;
+      }
     }
-    if(tempStr.substr(0, validConfigVals[1].size()).find(validConfigVals[1]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[PTHAT].size()).find(validConfigVals[PTHAT]) != std::string::npos){
       while(valStr.find(",,") != std::string::npos){
 	valStr.replace(valStr.find(",,"), 2, ",");
       }
@@ -218,13 +254,16 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	valStr.replace(0, valStr.find(",")+1, "");
       }
       if(valStr.size() != 0) pthats.push_back((unsigned int)std::stoi(valStr));
+
+      nConfigInputs[PTHAT]++;      
     }
 
-    if(tempStr.substr(0, validConfigVals[2].size()).find(validConfigVals[2]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[INPUT].size()).find(validConfigVals[INPUT]) != std::string::npos){
       inputStrings.push_back(valStr);
+      nConfigInputs[INPUT]++;      
     }
 
-    if(tempStr.substr(0, validConfigVals[3].size()).find(validConfigVals[3]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[ISPBPB].size()).find(validConfigVals[ISPBPB]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Please give \'TRUE\' or \'FALSE\'. Return false" << std::endl;
 	
@@ -233,13 +272,44 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	return false;
       }
       
-      configInputs[3] = valStr;
+      configInputs[ISPBPB] = valStr;
+      nConfigInputs[ISPBPB]++;
 
       if(parseTrueFalseStr(valStr)) isPbPb = true;
       else isPbPb = false;
     }
 
-    if(tempStr.substr(0, validConfigVals[4].size()).find(validConfigVals[4]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[JETTYPES].size()).find(validConfigVals[JETTYPES]) != std::string::npos){
+      jetTypes = valStr;
+      configInputs[JETTYPES] = jetTypes;
+      nConfigInputs[JETTYPES]++;
+
+      while(valStr.find("*") != std::string::npos){
+	if(valStr.substr(0, 1).find("!") != std::string::npos){
+	  std::string tempValStr = valStr.substr(1, valStr.find("*")-1);
+	  if(tempValStr.size() != 0) jetTypesRemove.push_back(tempValStr);
+	  valStr.replace(0, valStr.find("*")+1, "");
+	}
+	else{
+	  std::string tempValStr = valStr.substr(0, valStr.find("*"));
+	  if(tempValStr.size() != 0) jetTypesKeep.push_back(tempValStr);
+	  valStr.replace(0, valStr.find("*")+1, "");
+	}
+      }
+
+      if(valStr.size() != 0){
+	if(valStr.substr(0, 1).find("!") != std::string::npos){
+	  std::string tempValStr = valStr.substr(1, valStr.find("*")-1);
+	  if(tempValStr.size() != 0) jetTypesRemove.push_back(tempValStr);
+	}
+	else{
+	  std::string tempValStr = valStr.substr(0, valStr.find("*"));
+          if(tempValStr.size() != 0) jetTypesKeep.push_back(tempValStr);
+	}
+      }      
+    }
+
+    if(tempStr.substr(0, validConfigVals[NJTPTBINS].size()).find(validConfigVals[NJTPTBINS]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
 	nJtPtBins = 0;
@@ -264,12 +334,13 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
-      configInputs[4] = valStr;
+      configInputs[NJTPTBINS] = valStr;
       nJtPtBins = (unsigned int)std::stoi(valStr);
+      nConfigInputs[NJTPTBINS]++;
     }
 
 
-    if(tempStr.substr(0, validConfigVals[5].size()).find(validConfigVals[5]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[JTPTLOW].size()).find(validConfigVals[JTPTLOW]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
 	jtPtLow = 30.;
@@ -289,11 +360,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
-      configInputs[5] = valStr;
+      configInputs[JTPTLOW] = valStr;
+      nConfigInputs[JTPTLOW]++;
       jtPtLow = std::stof(valStr);
     }
 
-    if(tempStr.substr(0, validConfigVals[6].size()).find(validConfigVals[6]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[JTPTHI].size()).find(validConfigVals[JTPTHI]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
 	jtPtHi = 100.;
@@ -313,11 +385,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
-      configInputs[6] = valStr;
+      configInputs[JTPTHI] = valStr;
+      nConfigInputs[JTPTHI]++;
       jtPtHi = std::stof(valStr);
     }
 
-    if(tempStr.substr(0, validConfigVals[7].size()).find(validConfigVals[7]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[DOJTPTLOGBINS].size()).find(validConfigVals[DOJTPTLOGBINS]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
 	
@@ -326,13 +399,14 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
 
-      configInputs[7] = valStr;
+      configInputs[DOJTPTLOGBINS] = valStr;
+      nConfigInputs[DOJTPTLOGBINS]++;
 
       if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
       else doJtPtLogBins = false;
     }    
 
-    if(tempStr.substr(0, validConfigVals[8].size()).find(validConfigVals[8]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[DOWEIGHTS].size()).find(validConfigVals[DOWEIGHTS]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
 	
@@ -341,13 +415,14 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
 
-      configInputs[8] = valStr;
+      configInputs[DOWEIGHTS] = valStr;
+      nConfigInputs[DOWEIGHTS]++;
 
       if(parseTrueFalseStr(valStr)) doWeights = true;
       else doWeights = false;
     }
 
-    if(tempStr.substr(0, validConfigVals[9].size()).find(validConfigVals[9]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[DOPTHATSTAGGER].size()).find(validConfigVals[DOPTHATSTAGGER]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to true. Return true" << std::endl;
 
@@ -356,13 +431,14 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
 
-      configInputs[9] = valStr;	
+      configInputs[DOPTHATSTAGGER] = valStr;	
+      nConfigInputs[DOPTHATSTAGGER]++;
 
       if(parseTrueFalseStr(valStr)) doPthatStagger = true;
       else doPthatStagger = false;
     }
 
-    if(tempStr.substr(0, validConfigVals[10].size()).find(validConfigVals[10]) != std::string::npos){
+    if(tempStr.substr(0, validConfigVals[STAGGEROFFSET].size()).find(validConfigVals[STAGGEROFFSET]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
 	staggerOffset = 20.;
@@ -382,7 +458,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	continue;
       }
       // setting
-      configInputs[10] = valStr;
+      configInputs[STAGGEROFFSET] = valStr;
+      nConfigInputs[STAGGEROFFSET]++;
       staggerOffset = std::stof(valStr);
     }
   }
@@ -405,6 +482,17 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     ResetConfigParser();
 
     return false;
+  }
+
+  for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+    if(iter == INPUT) continue;
+    else if(nConfigInputs[iter] > 1){
+      std::cout << "Input \'" << validConfigVals[iter] << "\' has multiple input values in given config file. Return false." << std::endl;
+      
+      ResetConfigParser();
+
+      return false;
+    }
   }
   
 
@@ -458,6 +546,79 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
       return false;
     }
+    else{
+      //EDIT HERE
+      if(pthatIter == 0){
+	TFile* tempJetInFile_p = new TFile(inputStrings.at(pthatIter).c_str(), "READ");
+	jetTypesFinal = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+	tempJetInFile_p->Close();
+	delete tempJetInFile_p;
+
+	unsigned int jetIterFinal = 0;
+	while(jetTypesFinal.size() > jetIterFinal){
+	  bool keepBool = true;
+
+	  for(unsigned int jetIterKeep = 0; jetIterKeep < jetTypesKeep.size(); jetIterKeep++){
+	    if(jetTypesFinal.at(jetIterFinal).find(jetTypesKeep.at(jetIterKeep)) == std::string::npos){
+	      jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+	      keepBool = false;
+	      break;
+	    }
+	  }
+
+	  for(unsigned int jetIterRemove = 0; jetIterRemove < jetTypesRemove.size(); jetIterRemove++){
+	    if(jetTypesFinal.at(jetIterFinal).find(jetTypesRemove.at(jetIterRemove)) != std::string::npos){
+	      jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+	      keepBool = false;
+	      break;
+	    }
+	  }
+
+	  if(keepBool) jetIterFinal++;
+	}
+
+	if(jetTypesFinal.size() == 0){
+	  std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << inputStrings.at(pthatIter) << "\'. return false." << std::endl;
+
+	  ResetConfigParser();
+
+	  return false;
+	}
+      }
+      else{
+	std::vector<std::string> tempJetTypes;
+
+        TFile* tempJetInFile_p = new TFile(inputStrings.at(pthatIter).c_str(), "READ");
+        tempJetTypes = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+        tempJetInFile_p->Close();
+        delete tempJetInFile_p;
+
+	unsigned int jetIterFinal = 0;
+        while(jetTypesFinal.size() > jetIterFinal){
+	  bool keepBool = false;
+
+	  for(unsigned int jetIterTemp = 0; jetIterTemp < tempJetTypes.size(); jetIterTemp++){
+	    if(jetTypesFinal.at(jetIterFinal).find(tempJetTypes.at(jetIterTemp)) != std::string::npos && jetTypesFinal.at(jetIterFinal).size() == tempJetTypes.at(jetIterTemp).size()){
+	      keepBool = true;
+	      break;
+	    }
+	  }
+
+	  if(keepBool) jetIterFinal++;
+	  else{
+	    jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+	  }
+	}
+
+	if(jetTypesFinal.size() == 0){
+	  std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << inputStrings.at(pthatIter) << "\', after filtering on first file. return false." << std::endl;
+
+          ResetConfigParser();
+
+          return false;
+        }
+      }
+    }
   }
 
   if(0 == nJtPtBins){
@@ -493,6 +654,10 @@ void jecConfigParser::ResetConfigParser()
   pthats.clear();
   inputStrings.clear();
   isPbPb = false;
+  jetTypes = "";
+  jetTypesKeep.clear();
+  jetTypesRemove.clear();
+  jetTypesFinal.clear();
   nJtPtBins = 0;
   jtPtLow = 30.;
   jtPtHi = 100.;
@@ -502,9 +667,10 @@ void jecConfigParser::ResetConfigParser()
   staggerOffset = 20.;
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+    nConfigInputs[iter] = 0;
     configInputs[iter] = defaultConfigInputs[iter];
   }
-      
+  
   return;
 }
 
@@ -559,6 +725,41 @@ std::string jecConfigParser::GetInput(unsigned int pos)
 
 
 bool jecConfigParser::GetIsPbPb(){return isPbPb;}
+std::string jecConfigParser::GetJetTypes(){return jetTypes;}
+void jecConfigParser::PrintJetTypesKeep()
+{
+  std::cout << "Jet types to keep filter: ";
+  for(unsigned int iter = 0; iter < jetTypesKeep.size()-1; iter++){
+    std::cout << "\'" << jetTypesKeep.at(iter) << "\', ";
+  }
+  if(jetTypesKeep.size() != 0) std::cout << "\'" << jetTypesKeep.at(jetTypesKeep.size()-1) << "\'." << std::endl;
+  
+  return;
+}
+
+void jecConfigParser::PrintJetTypesRemove()
+{
+  std::cout << "Jet types to keep filter: ";
+  for(unsigned int iter = 0; iter < jetTypesRemove.size()-1; iter++){
+    std::cout << "\'" << jetTypesRemove.at(iter) << "\', ";
+  }
+  if(jetTypesRemove.size() != 0) std::cout << "\'" << jetTypesRemove.at(jetTypesRemove.size()-1) << "\'." << std::endl;
+  
+  return;
+}
+
+void jecConfigParser::PrintJetTypesFinal()
+{
+  std::cout << "Jet types to keep filter: ";
+  for(unsigned int iter = 0; iter < jetTypesFinal.size()-1; iter++){
+    std::cout << "\'" << jetTypesFinal.at(iter) << "\', ";
+  }
+  if(jetTypesFinal.size() != 0) std::cout << "\'" << jetTypesFinal.at(jetTypesFinal.size()-1) << "\'." << std::endl;
+  
+  return;
+}
+
+std::vector<std::string> jecConfigParser::GetJetTypesFinal(){return jetTypesFinal;}
 
 unsigned int jecConfigParser::GetNJtPtBins(){return nJtPtBins;}
 float jecConfigParser::GetJtPtLow(){return jtPtLow;}
