@@ -1,0 +1,42 @@
+#Valid types are DIJET, GAMMAJET, ZJET
+EVENTTYPE=DIJET
+OUTNAME=outFile_DiJet_ZReweight
+
+NPTHAT = 3
+PTHAT = 30,50,80
+
+INPUT= 30,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+#INPUT= 15,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet15_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+INPUT= 50,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet50_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+INPUT= 80,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet80_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+
+ISPBPB = TRUE
+
+#Jet type filter: will and strings separated by *, ! will exclude, EX: ak*4*!Calo will grab all ak R= 0.4 jets# that are non-Calo
+JETTYPES=akPu3*PF
+
+#Parameters governing x-axis range + ptbinning
+NJTPTBINS = 12
+JTPTLOW = 30.
+JTPTHI = 150.
+DOJTPTLOGBINS = TRUE
+JTETAMAX = 1.6
+JTETAPTTHRESH = 30
+JTETABINS = 16
+JTETAPTBINS = 3
+
+#Parameters governing how pthats fit together
+DOWEIGHTS = TRUE
+DOWEIGHTTRUNC = TRUE
+#PTHATWEIGHTS = 2.99755,0.14648,0.0150957,0.00167182
+PTHATWEIGHTS = 0.14648,0.0150957,0.00167182
+DOPTHATSTAGGER = FALSE
+STAGGEROFFSET = 0.
+
+#Centrality binning
+NCENTBINS = 2
+CENTBINS = 100, 30, 0
+
+#GAMMAJET specific cuts
+MINGAMMAPT=35
+GAMMAPTHATSTAGGER=0

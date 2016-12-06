@@ -24,12 +24,14 @@
 
 #include "include/jecConfigParser.h"
 
+#include "getPtEtaJetResidualCorr.h"
+
 const std::string storeStr = "/store";
 const std::string xrootdStr = "root://xrootd.unl.edu/";
 
 
 const Bool_t debugMode = false;
-const Bool_t doGetBkg = false;
+const Bool_t doGetBkg = true;
 
 const Int_t nJtCat = 3;
 const std::string jtCat[nJtCat] = {"Eta2", "Eta1", "Dijet"};
@@ -41,8 +43,6 @@ const Int_t nQG = 3;
 const std::string qg[nQG] = {"Inc", "Q", "G"};
 
 const Int_t nMaxJets = 500;
-
-const Int_t nCentBins = 1;
 
 const Int_t nMaxGen = 100000;
 
@@ -59,6 +59,15 @@ float findNcoll(int hiBin) {
   return Ncoll[hiBin];
 }
 
+
+float findNormNcoll(int hiBin, int centPos, std::vector<unsigned int> centBins)
+{
+  float nCollWeight = findNcoll(hiBin);
+  
+  float normNColl = findNcoll(centBins.at(centPos+1)*2-1);
+
+  return nCollWeight/normNColl;
+}
 
 void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtEta[])
 {
@@ -85,14 +94,17 @@ void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtE
 }
 
 
-void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr)
+void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr, Bool_t isWeighted = true)
 {
   if(hist_p->Integral() == 0) return;
   if(hist_p->GetEntries() == 0) return;
 
+  std::string fitOpt = "Q M E";
+  if(!isWeighted) fitOpt = "Q M E L";
+
   TF1* f1_p = new TF1("f1_p", "gaus", hist_p->GetXaxis()->GetXmin(), hist_p->GetXaxis()->GetXmax());
 
-  hist_p->Fit("f1_p", "Q M");
+  hist_p->Fit("f1_p", fitOpt.c_str());
 
   mean = f1_p->GetParameter(1);
   res = f1_p->GetParameter(2);
@@ -100,10 +112,19 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
   meanErr = f1_p->GetParError(1);
   resErr = f1_p->GetParError(2);
 
-  //  if(f1_p->GetProb() > .01) return;
-  //if(!isPbPb) return;
+  if(f1_p->GetProb() > .01) return;
 
-  //  return;
+  hist_p->Rebin(2);
+
+  hist_p->Fit("f1_p", fitOpt.c_str());
+
+  mean = f1_p->GetParameter(1);
+  res = f1_p->GetParameter(2);
+
+  meanErr = f1_p->GetParError(1);
+  resErr = f1_p->GetParError(2);
+
+  if(f1_p->GetProb() > .01) return;
 
   for(Int_t fitIter = 0; fitIter < 3; fitIter++){
     Float_t max = -1;
@@ -135,7 +156,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     }
     
     if(nBins >= 7){
-      hist_p->Fit("f1_p", "Q M", "", fitLow, fitHi);
+      hist_p->Fit("f1_p", fitOpt.c_str(), "", fitLow, fitHi);
       
       mean = f1_p->GetParameter(1);
       res = f1_p->GetParameter(2);
@@ -145,7 +166,6 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
       
       //  if(TMath::Abs(mean - 1.0) < 0.01) return;
       if(f1_p->GetProb() > .01) return;
-      return;
     }
     nBins = 1;
     
@@ -168,7 +188,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
     
     
     if(nBins >= 7){
-      hist_p->Fit("f1_p", "Q M", "", fitLow, fitHi);
+      hist_p->Fit("f1_p", fitOpt.c_str(), "", fitLow, fitHi);
       
       mean = f1_p->GetParameter(1);
       res = f1_p->GetParameter(2);
@@ -186,10 +206,18 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 
 int makeJECHist_Prototype(const std::string inConfigFileName)
 {
+  initPtEtaJetResidualCorr();
+
+  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBia\
+s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
+  TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
+  TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
+
+
   jecConfigParser config;
   if(!config.SetConfigParser(inConfigFileName)) return 1;
 
-  const std::string outName = "fileForConfigTest.root";
+  const std::string outName = config.GetOutName();
   TFile* outFile_p = new TFile(outName.c_str(), "RECREATE");
   
   TFile* tempJetInFile_p = TFile::Open(config.GetInput(0).c_str(), "READ");
@@ -229,6 +257,7 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   }
 
   Float_t vz_;
+  Int_t hiBin_ = 0;
 
   UInt_t run_;
   ULong64_t evt_;
@@ -254,6 +283,25 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   Float_t genJtEta_[nJetAlgo][nMaxJets];
   Float_t genJtPhi_[nJetAlgo][nMaxJets];
 
+  std::vector<float>* mcPt_p=0;
+  std::vector<float>* mcPhi_p=0;
+  std::vector<float>* mcEta_p=0;
+  std::vector<int>* mcPID_p=0;
+  std::vector<int>* mcMomPID_p=0;
+
+  std::vector<float>* phoPt_p=0;
+  std::vector<float>* phoPhi_p=0;
+  std::vector<float>* phoEta_p=0;
+  std::vector<float>* phoSeedTime_p = 0;
+  std::vector<float>* phoSwissCrx_p = 0;
+  std::vector<float>* phoHoverE_p = 0;
+  std::vector<float>* phoSigmaIEtaIEta_2012_p=0;
+  std::vector<float>* pho_ecalClusterIsoR4_p=0;
+  std::vector<float>* pho_hcalRechitIsoR4_p=0;
+  std::vector<float>* pho_trackIsoR4PtCut20_p=0;
+  std::vector<float>* phoR9_p=0;
+
+
   //pthat30  
   const Int_t nJtPtBins = config.GetNJtPtBins();
   const Float_t jtPtLow = config.GetJtPtLow();
@@ -262,18 +310,86 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
   if(config.GetDoJtPtLogBins()) getLogBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
   else getLinBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
 
+  const Int_t nJtPtEtaBins = config.GetJtPtEtaBins();
+  Double_t jtPtEtaBins[nJtPtEtaBins+1];
+  getLinBins(0, config.GetJtEtaMax(), nJtPtEtaBins, jtPtEtaBins);
+
+  const Int_t nJtEtaBins = config.GetJtEtaBins();
+  const Float_t jtEtaLow = -(config.GetJtEtaMax());
+  const Float_t jtEtaHi = config.GetJtEtaMax();
+  Double_t jtEtaBins[nJtEtaBins+1];
+  getLinBins(jtEtaLow, jtEtaHi, nJtEtaBins, jtEtaBins);
+
+  const Int_t nCentBins = config.GetNCentBins();
+
+  TH1F* ptHat_Unweighted_h = new TH1F("ptHat_Unweighted_h", ";pthat;Events", 37, 15, 200);
+  TH1F* ptHat_Weighted_h = new TH1F("ptHat_Weighted_h", ";pthat;Events", 37, 15, 200);
+  ptHat_Unweighted_h->Sumw2();
+  ptHat_Weighted_h->Sumw2();
 
   const unsigned int nPtHats = config.GetNPthats();
+  TH1F* ptHat_Unweighted_PerPthat_h[nPtHats];
+  TH1F* ptHat_Weighted_PerPthat_h[nPtHats];
+
+  for(unsigned int iter = 0; iter < nPtHats; iter++){
+    std::string nameUnweighted = "ptHat_Unweighted_PerPthat_" + std::to_string(config.GetPthat(iter)) + "_h";
+    std::string nameWeighted = "ptHat_Weighted_PerPthat_" + std::to_string(config.GetPthat(iter)) + "_h";
+
+    ptHat_Unweighted_PerPthat_h[iter] = new TH1F(nameUnweighted.c_str(), ";pthat;Events", 37, 15, 200);
+    ptHat_Weighted_PerPthat_h[iter] = new TH1F(nameWeighted.c_str(), ";pthat;Events", 37, 15, 200);
+
+    ptHat_Unweighted_PerPthat_h[iter]->Sumw2();
+    ptHat_Weighted_PerPthat_h[iter]->Sumw2();
+  }
+
+
+  TH1F* genPhoPt_Unweighted_h[nCentBins];
+  TH1F* genPhoPt_Weighted_h[nCentBins];
+  TH1F* recoPhoPt_Unweighted_h[nCentBins];
+  TH1F* recoPhoPt_Weighted_h[nCentBins];
+
+  for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+    std::string centStr = "PP";
+    if(config.GetIsPbPb()) centStr = "Cent" + std::to_string(config.GetCentBinFromPos(centIter)) + "to" + std::to_string(config.GetCentBinFromPos(centIter+1));
+
+    std::string genNameUnweighted = "genPhoPt_Unweighted_" + centStr + "_h";
+    std::string genNameWeighted = "genPhoPt_Weighted_" + centStr + "_h";
+
+    genPhoPt_Unweighted_h[centIter] = new TH1F(genNameUnweighted.c_str(), ";Gen. Photon p_{T};Events", 25, config.GetMinGammaPt(), config.GetMinGammaPt()+100);
+    genPhoPt_Weighted_h[centIter] = new TH1F(genNameWeighted.c_str(), ";Gen. Photon p_{T};Events", 25, config.GetMinGammaPt(), config.GetMinGammaPt()+100);
+
+    genPhoPt_Unweighted_h[centIter]->Sumw2();
+    genPhoPt_Weighted_h[centIter]->Sumw2();
+
+    std::string recoNameUnweighted = "recoPhoPt_Unweighted_" + centStr + "_h";
+    std::string recoNameWeighted = "recoPhoPt_Weighted_" + centStr + "_h";
+
+    recoPhoPt_Unweighted_h[centIter] = new TH1F(recoNameUnweighted.c_str(), ";Reco. Photon p_{T};Events", 50, config.GetMinGammaPt(), config.GetMinGammaPt()+100);
+    recoPhoPt_Weighted_h[centIter] = new TH1F(recoNameWeighted.c_str(), ";Reco. Photon p_{T};Events", 50, config.GetMinGammaPt(), config.GetMinGammaPt()+100);
+
+    recoPhoPt_Unweighted_h[centIter]->Sumw2();
+    recoPhoPt_Weighted_h[centIter]->Sumw2();
+  }
+
   TH1F* genJtPtPerPthat_p[nJetAlgo][nCentBins][nQG][nPtHats];
   TH2F* jtRecoVGen_p[nJetAlgo][nCentBins][nQG];
   TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins][nQG];
-  TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins][nQG][nMeanFit];
-  TH1F* jtRecoOverGenVPt_Res_p[nJetAlgo][nCentBins][nQG][nMeanFit];
-  TH1F* jtRecoOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins][nQG][nJtPtBins];
+
+  TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVPt_Res_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nJtPtBins];
+  Int_t jtRecoOverGenVPt_MeanResPts_COUNTS[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nJtPtBins];
+
+  TH1F* jtRecoOverGenVEta_Mean_p[nJetAlgo][nCentBins][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVEta_Res_p[nJetAlgo][nCentBins][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins][nQG][nJtEtaBins];
+  Int_t jtRecoOverGenVEta_MeanResPts_COUNTS[nJetAlgo][nCentBins][nQG][nJtEtaBins];
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
       std::string centStr = "PP";
+      if(config.GetIsPbPb()) centStr = "Cent" + std::to_string(config.GetCentBinFromPos(centIter)) + "to" + std::to_string(config.GetCentBinFromPos(centIter+1));
+
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	jtRecoVGen_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoVGen_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; Reco. %s Jet p_{T}", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, nJtPtBins, jtPtBins);
@@ -284,35 +400,91 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	  std::string nameGenJtPtPerPthat = "genJtPtPerPthat_" + qg[qgIter] + "_" + jetAlgo.at(iter) + "_" + centStr + "_Pthat" + std::to_string(config.GetPthat(pthatIter)) + "_h";
 	  genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter] = new TH1F(nameGenJtPtPerPthat.c_str(), ";Gen. Jet p_{T};Events", nJtPtBins, jtPtBins);
 	}
+      }
 
-	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
-	}
-	
-	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);	 
-	}
-	
-	
-	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	  Int_t ptLowInt = std::trunc(jtPtBins[jtIter]);
-	  Int_t ptHiInt = std::trunc(jtPtBins[jtIter+1]);
+      for(Int_t ptEtaIter = 0; ptEtaIter < nJtPtEtaBins+1; ptEtaIter++){
+	std::string ptEtaStr = "EtaInc";
+	if(ptEtaIter > 0){
+	  Int_t ptEtaLowInt = std::trunc(jtPtEtaBins[ptEtaIter-1]);
+	  Int_t ptEtaHiInt = std::trunc(jtPtEtaBins[ptEtaIter]);
 	  
-	  Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
-	  Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
+	  Int_t ptEtaLowDec = std::trunc(jtPtEtaBins[ptEtaIter-1]*10 - ptEtaLowInt*10);
+	  Int_t ptEtaHiDec = std::trunc(jtPtEtaBins[ptEtaIter]*10 - ptEtaHiInt*10);
+	 
+	  ptEtaStr = "Eta" + std::to_string(ptEtaLowInt) + "p" + std::to_string(ptEtaLowDec) + "to" + std::to_string(ptEtaHiInt) + "p" + std::to_string(ptEtaHiDec);
+	}
+
+	
+	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverGenVPt_Mean_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_%sMean_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
+	  }
 	  
-	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 99, 0, 3);
-	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Sumw2();
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    jtRecoOverGenVPt_Res_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_%sRes_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);	 
+	  }
+	  
+	 
+	  for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	    Int_t ptLowInt = std::trunc(jtPtBins[jtIter]);
+	    Int_t ptHiInt = std::trunc(jtPtBins[jtIter+1]);
+	    
+	    Int_t ptLowDec = std::trunc(jtPtBins[jtIter]*10 - ptLowInt*10);
+	    Int_t ptHiDec = std::trunc(jtPtBins[jtIter+1]*10 - ptHiInt*10);
+	    
+	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][ptEtaIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_MeanResPts_Pt%dp%dTo%dp%d_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), ptLowInt, ptLowDec, ptHiInt, ptHiDec), 60, 0, 2);
+	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][ptEtaIter][qgIter][jtIter]->Sumw2();
+	    
+	    jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][ptEtaIter][qgIter][jtIter] = 0;
+	  }
+	}
+      }
+      
+      for(Int_t qgIter = 0; qgIter < nQG; qgIter++){	  
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+          jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sMean_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
+        }
+
+        for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+          jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%sRes_%s_%s_h", qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
+        }
+
+
+
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  Int_t etaLowInt = std::trunc(jtEtaBins[jtIter]);
+	  Int_t etaHiInt = std::trunc(jtEtaBins[jtIter+1]);
+	  
+	  Int_t etaLowDec = std::trunc(jtEtaBins[jtIter]*10 - etaLowInt*10);
+	  Int_t etaHiDec = std::trunc(jtEtaBins[jtIter+1]*10 - etaHiInt*10);
+	  
+	  
+	  
+
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_MeanResPts_Eta%dp%dTo%dp%d_%s_%s_h", qg[qgIter].c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec, jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%d.%d<p_{T,Gen.}<%d.%d)", jetAlgo.at(iter).c_str(), etaLowInt, etaLowDec, etaHiInt, etaHiDec), 60, 0, 2);
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Sumw2();
+
+	  jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][qgIter][jtIter]++;
 	}
       }
     }
   }
   
+  const unsigned int nInputs = config.GetNInputs();
+  unsigned int inputCounts[nInputs];
+  for(unsigned int iter = 0; iter < nInputs; iter++){
+    inputCounts[iter] = 0;
+  }
 
-  for(unsigned int pthatIter = 0; pthatIter < config.GetNPthats(); pthatIter++){
+  for(unsigned int pthatIter = 0; pthatIter < nInputs; pthatIter++){
+    std::cout << "Begin processing " << pthatIter+1 << "/" << nInputs << "(ptHat == " << config.GetInputPtHat(pthatIter) << "): \'" << config.GetInput(pthatIter) << "\'...." << std::endl;
+
     TFile* inFile_p = TFile::Open(config.GetInput(pthatIter).c_str(), "READ");
     TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
     TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
+    TTree* phoTree_p=0;
+    if(config.GetIsPbPb()) phoTree_p = (TTree*)inFile_p->Get("ggHiNtuplizer/EventTree");
+    else phoTree_p = (TTree*)inFile_p->Get("ggHiNtuplizerGED/EventTree");
     TTree* jetTree_p[nJetAlgo];
       
     for(Int_t iter = 0; iter < nJetAlgo; iter++){
@@ -323,10 +495,12 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
     hiTree_p->SetBranchStatus("vz", 1);
     hiTree_p->SetBranchStatus("run", 1);
     hiTree_p->SetBranchStatus("evt", 1);
-    
+    if(config.GetIsPbPb()) hiTree_p->SetBranchStatus("hiBin", 1);
+
     hiTree_p->SetBranchAddress("vz", &vz_);
     hiTree_p->SetBranchAddress("run", &run_);
     hiTree_p->SetBranchAddress("evt", &evt_);
+    if(config.GetIsPbPb()) hiTree_p->SetBranchAddress("hiBin", &hiBin_);
       
       
     genTree_p->SetBranchStatus("*", 0);
@@ -374,7 +548,43 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
       jetTree_p[iter]->SetBranchAddress("geneta", genJtEta_[iter]);
       jetTree_p[iter]->SetBranchAddress("genphi", genJtPhi_[iter]);
     }
-      
+     
+    phoTree_p->SetBranchStatus("*", 0);
+    phoTree_p->SetBranchStatus("mcPt", 1);
+    phoTree_p->SetBranchStatus("mcPhi", 1);
+    phoTree_p->SetBranchStatus("mcEta", 1);
+    phoTree_p->SetBranchStatus("mcPID", 1);
+    phoTree_p->SetBranchStatus("mcMomPID", 1);
+    phoTree_p->SetBranchStatus("phoEt", 1);
+    phoTree_p->SetBranchStatus("phoEta", 1);
+    phoTree_p->SetBranchStatus("phoPhi", 1);
+    phoTree_p->SetBranchStatus("pho_seedTime", 1);
+    phoTree_p->SetBranchStatus("pho_swissCrx", 1);
+    phoTree_p->SetBranchStatus("phoHoverE", 1);
+    phoTree_p->SetBranchStatus("phoSigmaIEtaIEta_2012", 1);
+    phoTree_p->SetBranchStatus("pho_ecalClusterIsoR4", 1);
+    phoTree_p->SetBranchStatus("pho_hcalRechitIsoR4", 1);
+    phoTree_p->SetBranchStatus("pho_trackIsoR4PtCut20", 1);
+    phoTree_p->SetBranchStatus("phoR9", 1);
+
+    phoTree_p->SetBranchAddress("mcPt", &mcPt_p);
+    phoTree_p->SetBranchAddress("mcPhi", &mcPhi_p);
+    phoTree_p->SetBranchAddress("mcEta", &mcEta_p);
+    phoTree_p->SetBranchAddress("mcPID", &mcPID_p);
+    phoTree_p->SetBranchAddress("mcMomPID", &mcMomPID_p);
+    phoTree_p->SetBranchAddress("phoEt", &phoPt_p);
+    phoTree_p->SetBranchAddress("phoEta", &phoEta_p);
+    phoTree_p->SetBranchAddress("phoPhi", &phoPhi_p);
+    phoTree_p->SetBranchAddress("pho_seedTime", &phoSeedTime_p);
+    phoTree_p->SetBranchAddress("pho_swissCrx", &phoSwissCrx_p);
+    phoTree_p->SetBranchAddress("phoHoverE", &phoHoverE_p);
+    phoTree_p->SetBranchAddress("phoSigmaIEtaIEta_2012", &phoSigmaIEtaIEta_2012_p);
+    phoTree_p->SetBranchAddress("pho_ecalClusterIsoR4", &pho_ecalClusterIsoR4_p);
+    phoTree_p->SetBranchAddress("pho_hcalRechitIsoR4", &pho_hcalRechitIsoR4_p);
+    phoTree_p->SetBranchAddress("pho_trackIsoR4PtCut20", &pho_trackIsoR4PtCut20_p);
+    phoTree_p->SetBranchAddress("phoR9", &phoR9_p);
+
+ 
     if(debugMode) std::cout << __LINE__ << std::endl;
     
     Int_t tempStartPos = 0;
@@ -389,17 +599,186 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
       
       hiTree_p->GetEntry(entry);
       genTree_p->GetEntry(entry);
+      phoTree_p->GetEntry(entry);
+
+
+      Float_t genTempLeadingPhoPt = -999;
+      //      Float_t genTempLeadingPhoPhi = -999;
+      //      Float_t genTempLeadingPhoEta = -999;
+
+      Float_t recoTempLeadingPhoPt = -999;
+      Float_t recoTempLeadingPhoPhi = -999;
+      Float_t recoTempLeadingPhoEta = -999;
+
+      Float_t tempLeadingMuPt_ = -999;
+      Float_t tempLeadingMuPhi_ = -999;
+      Float_t tempLeadingMuEta_ = -999;
+
+      Float_t tempSubleadingMuPt_ = -999;
+      Float_t tempSubleadingMuPhi_ = -999;
+      Float_t tempSubleadingMuEta_ = -999;
+
+      Float_t tempLeadingElePt_ = -999;
+      Float_t tempLeadingElePhi_ = -999;
+      Float_t tempLeadingEleEta_ = -999;
+
+      Float_t tempSubleadingElePt_ = -999;
+      Float_t tempSubleadingElePhi_ = -999;
+      Float_t tempSubleadingEleEta_ = -999;
+
+      if(config.GetIsGammaJet()){	
+	const Int_t nGenPart = mcPt_p->size();
+
+	for(Int_t genIter = 0; genIter < nGenPart; genIter++){
+	  if(mcPID_p->at(genIter) != 22) continue;
+
+	  //	  if(mcMomPID_p->at(genIter) != -999) continue;
+
+	  if(genTempLeadingPhoPt < mcPt_p->at(genIter)){
+            genTempLeadingPhoPt = mcPt_p->at(genIter);
+	  }   
+	}
+	
+	const Int_t nPho = phoPt_p->size();
+
+	for(Int_t phoIter = 0; phoIter < nPho; phoIter++){
+	  if(TMath::Abs(phoEta_p->at(phoIter)) > 1.44) continue;
+
+	  if(phoSigmaIEtaIEta_2012_p->at(phoIter) < .002) continue;
+	  if(TMath::Abs(phoSeedTime_p->at(phoIter)) > 3) continue;
+	  if(phoSwissCrx_p->at(phoIter) > .9) continue;
+	  if(phoSigmaIEtaIEta_2012_p->at(phoIter) > .01) continue;
+	  if(pho_ecalClusterIsoR4_p->at(phoIter) + pho_hcalRechitIsoR4_p->at(phoIter) + pho_trackIsoR4PtCut20_p->at(phoIter) > 1) continue;
+	  if(phoHoverE_p->at(phoIter) > .1) continue;
+
+	  if(recoTempLeadingPhoPt < phoPt_p->at(phoIter)){
+	    recoTempLeadingPhoPt = phoPt_p->at(phoIter);
+	  }
+	}
+      }
+      else if(config.GetIsZJet()){
+	const Int_t nGenPart = genPt_p->size();
+	
+        for(Int_t genIter = 0; genIter < nGenPart; genIter++){                                                   
+	  //	  if(TMath::Abs(genEta_p->at(genIter)) > 2.4) continue;
+	  if(TMath::Abs(genPDG_p->at(genIter)) != 11 && TMath::Abs(genPDG_p->at(genIter)) != 13) continue; 
+
+	  if(TMath::Abs(genPDG_p->at(genIter)) == 11){
+	    if(tempLeadingElePt_ < genPt_p->at(genIter)){
+	      tempSubleadingElePt_ = tempLeadingElePt_;
+	      tempSubleadingElePhi_ = tempLeadingElePhi_;
+	      tempSubleadingEleEta_ = tempLeadingEleEta_;
+
+	      tempLeadingElePt_ = genPt_p->at(genIter);
+	      tempLeadingElePhi_ = genPhi_p->at(genIter);
+	      tempLeadingEleEta_ = genEta_p->at(genIter);
+	    }
+	    else if(tempSubleadingElePt_ < genPt_p->at(genIter)){
+	      tempSubleadingElePt_ = genPt_p->at(genIter);
+	      tempSubleadingElePhi_ = genPhi_p->at(genIter);
+	      tempSubleadingEleEta_ = genEta_p->at(genIter);
+	    }
+	  }
+	   
+	  if(TMath::Abs(genPDG_p->at(genIter)) == 13){
+	    if(tempLeadingMuPt_ < genPt_p->at(genIter)){
+	      tempSubleadingMuPt_ = tempLeadingMuPt_;
+	      tempSubleadingMuPhi_ = tempLeadingMuPhi_;
+	      tempSubleadingMuEta_ = tempLeadingMuEta_;
+
+	      tempLeadingMuPt_ = genPt_p->at(genIter);
+	      tempLeadingMuPhi_ = genPhi_p->at(genIter);
+	      tempLeadingMuEta_ = genEta_p->at(genIter);
+	    }
+	    else if(tempSubleadingMuPt_ < genPt_p->at(genIter)){
+	      tempSubleadingMuPt_ = genPt_p->at(genIter);
+	      tempSubleadingMuPhi_ = genPhi_p->at(genIter);
+	      tempSubleadingMuEta_ = genEta_p->at(genIter);
+	    }
+	  }
+	}                                          
+      }
       
+      if(config.GetIsGammaJet()){
+	if(recoTempLeadingPhoPt < config.GetMinGammaPt()) continue;
+	if(TMath::Abs(recoTempLeadingPhoEta) > 1.44) continue;
+	if(config.GetGammaPtHatStagger() + config.GetInputPtHat(pthatIter) > recoTempLeadingPhoPt) continue;
+      }
+      
+
+      if(config.GetIsZJet()){
+	Bool_t isGoodMu = false;
+	Bool_t isGoodEle = false;
+	if(tempLeadingMuPt_ > 10 && tempSubleadingMuPt_ > 5) isGoodMu = true;
+	if(tempLeadingElePt_ > 10 && tempSubleadingElePt_ > 5) isGoodEle = true;
+
+	if(!isGoodMu && ! isGoodEle) continue;
+
+	if(isGoodMu){
+	  TLorentzVector mu1, mu2;
+	  mu1.SetPtEtaPhiM(tempLeadingMuPt_, tempLeadingMuEta_, tempLeadingMuPhi_, muMass);
+	  mu2.SetPtEtaPhiM(tempSubleadingMuPt_, tempSubleadingMuEta_, tempSubleadingMuPhi_, muMass);
+	  
+	  TLorentzVector z = mu1+mu2;
+
+	  if(z.Pt() < 30) continue;
+	}
+	else if(isGoodEle){
+	  TLorentzVector ele1, ele2;
+	  ele1.SetPtEtaPhiM(tempLeadingElePt_, tempLeadingEleEta_, tempLeadingElePhi_, eleMass);
+	  ele2.SetPtEtaPhiM(tempSubleadingElePt_, tempSubleadingEleEta_, tempSubleadingElePhi_, eleMass);
+
+	  TLorentzVector z = ele1+ele2;
+
+	  if(z.Pt() < 30) continue;
+	}
+      }
+
       if(TMath::Abs(vz_) > 15) continue;
       
       if(debugMode) std::cout << __LINE__ << std::endl;
-      
+
       for(Int_t iter = 0; iter < nJetAlgo; iter++){
 	jetTree_p[iter]->GetEntry(entry);
       }
 
-      Int_t centPos = 0;
+      if(config.GetDoPthatStagger()){
+	if(config.GetInputPtHatPos(pthatIter) != config.GetNPthats()-1){
+	  if(ptHat_[0] > config.GetPthat(config.GetInputPtHatPos(pthatIter)+1)) continue;
+	}
+      }
       
+      
+      if(config.GetIsPbPb()){
+	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+	  for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
+	    jtPt_[algoIter][jtIter] *= getPtEtaJetResidualCorr(jtPt_[algoIter][jtIter], jtEta_[algoIter][jtIter], hiBin_/2.);
+	  }
+	}
+      }
+      
+      Int_t centPos = config.GetCentBinFromHiBin(hiBin_);
+
+      Double_t ptHatWeight = config.GetPtHatWeight(ptHat_[0]);
+
+      ptHat_Unweighted_h->Fill(ptHat_[0]);
+      ptHat_Weighted_h->Fill(ptHat_[0], ptHatWeight);
+
+      ptHat_Unweighted_PerPthat_h[config.GetInputPtHatPos(pthatIter)]->Fill(ptHat_[0]);
+      ptHat_Weighted_PerPthat_h[config.GetInputPtHatPos(pthatIter)]->Fill(ptHat_[0], ptHatWeight);
+      
+      if(config.GetIsGammaJet()){
+	if(genTempLeadingPhoPt > 0){
+	  genPhoPt_Unweighted_h[centPos]->Fill(genTempLeadingPhoPt);
+	  genPhoPt_Weighted_h[centPos]->Fill(genTempLeadingPhoPt, ptHatWeight);
+	}
+	
+	if(recoTempLeadingPhoPt > 0){
+	  recoPhoPt_Unweighted_h[centPos]->Fill(recoTempLeadingPhoPt);
+	  recoPhoPt_Weighted_h[centPos]->Fill(recoTempLeadingPhoPt, ptHatWeight);
+	}
+      }
+
       if(debugMode) std::cout << __LINE__ << std::endl;
       
       for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
@@ -407,34 +786,117 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
 	
 	//MODDING FOR REFPT USAGE
 	for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
-	  if(TMath::Abs(refEta_[algoIter][jtIter]) > 4.9) continue;
+	  if(TMath::Abs(refEta_[algoIter][jtIter]) > config.GetJtEtaMax()) continue;
 	  if(refPt_[algoIter][jtIter] < 5.0) continue;
 	  if(refSubID_[algoIter][jtIter] != 0) continue;
 
-	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter]) < .1) continue;
+	  if(refPt_[algoIter][jtIter] < config.GetJtPtLow()) continue;
+	  if(refPt_[algoIter][jtIter] > config.GetJtPtHi()) continue;
+
+	  //	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], recoTempLeadingPhoPt) < .1) continue;
 	  
+	  Float_t jtWeight = config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], refEta_[algoIter][jtIter], recoTempLeadingPhoPt);
+	  Float_t hiBinWeight = findNormNcoll(hiBin_, centPos, config.GetCentBins());
+	  //	  hiBinWeight = 1;
+
+	  Double_t truncPtHatWeight = config.GetTruncPtHatWeight(ptHat_[0], refPt_[algoIter][jtIter]);
+	  truncPtHatWeight = 1;
+
+	  if(config.GetDoPthatStagger()){
+	    if(jtWeight < .1) continue;
+	  }
+	  
+	  if(config.GetIsGammaJet() && recoTempLeadingPhoPt > 0){
+	    if(getDR(recoTempLeadingPhoEta, recoTempLeadingPhoPhi, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
+	  }
+	  
+	  if(config.GetIsZJet()){
+	    if(tempLeadingMuPt_ > 10){
+	      if(getDR(tempLeadingMuEta_, tempLeadingMuPhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
+	    }
+	    if(tempSubleadingMuPt_ > 5){	  
+	      if(getDR(tempSubleadingMuEta_, tempSubleadingMuPhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
+	    }
+	    if(tempLeadingElePt_ > 10){
+	      if(getDR(tempLeadingEleEta_, tempLeadingElePhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
+	    }
+	    if(tempSubleadingElePt_ > 5){
+	      if(getDR(tempSubleadingEleEta_, tempSubleadingElePhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
+	    }
+	  }
+	
 	  Int_t qgPos[2] = {0, -1};
 	  if(TMath::Abs(refPartFlav_[algoIter][jtIter]) < 9) qgPos[1] = 1;
-	  else if(TMath::Abs(refPartFlav_[algoIter][jtIter]) == 21) qgPos[1] = 2;
-	  
-	  for(Int_t qgIter = 0; qgIter < 2; qgIter++){
-	    if(qgPos[qgIter] == -1) continue;
+	  else if(TMath::Abs(refPartFlav_[algoIter][jtIter]) == 21) qgPos[1] = 2;	
+  
+	  Int_t etaPos[2] = {0, -1};
+
+	  for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins; jtPtEtaIter++){
+	    if(TMath::Abs(refEta_[algoIter][jtIter]) <= jtPtEtaBins[jtPtEtaIter+1]){
+	      etaPos[1] = jtPtEtaIter+1;
+	      break;
+	    }
+	  }
+
+	  if(etaPos[1] == -1) std::cout << "Error, no eta pos for jet w/ refeta \'" << refEta_[algoIter][jtIter] << "\'." << std::endl;
+
+	  Float_t qgWeight = 1;
+
+	  if(config.GetIsDijet()){
+	    if(qgPos[1] == 1){
+	      if(refPt_[algoIter][jtIter] < 300) qgWeight *= qRatio_p->GetBinContent(qRatio_p->FindBin(refPt_[algoIter][jtIter]));
+	      else qgWeight *= qRatio_p->GetBinContent(qRatio_p->GetNbinsX());
+	    }
+	    else if(qgPos[1] == 2){
+	      if(refPt_[algoIter][jtIter] < 300) qgWeight *= gRatio_p->GetBinContent(gRatio_p->FindBin(refPt_[algoIter][jtIter]));
+	      else qgWeight *= gRatio_p->GetBinContent(gRatio_p->GetNbinsX());
+	    }
+	  }
+
+	  //	  qgWeight = 1.;
+
+      
+	  for(Int_t jtPtEtaIter = 0; jtPtEtaIter < 2; jtPtEtaIter++){
+	    for(Int_t qgIter = 0; qgIter < 2; qgIter++){
+	      if(qgPos[qgIter] == -1) continue;
 	    
-	    jtRecoVGen_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]);
-	    jtRecoOverGenVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
-	  
-	    for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
-	      if(refPt_[algoIter][jtIter] > jtPtBins[jtIter2] && refPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
-		jtRecoOverGenVPt_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	      if(jtPtEtaIter == 0){
+		jtRecoVGen_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]);
+		jtRecoOverGenVPt_p[algoIter][centPos][qgPos[qgIter]]->Fill(refPt_[algoIter][jtIter], jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter]);
+	      }
+
+	      for(Int_t jtIter2 = 0; jtIter2 < nJtPtBins; jtIter2++){
+		if(refPt_[algoIter][jtIter] > jtPtBins[jtIter2] && refPt_[algoIter][jtIter] < jtPtBins[jtIter2+1]){
+		  jtRecoOverGenVPt_MeanResPts_p[algoIter][centPos][etaPos[jtPtEtaIter]][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter], qgWeight*hiBinWeight*truncPtHatWeight);
+		  if(qgIter == 0){
+		    inputCounts[pthatIter]++;
+		  }
+		  jtRecoOverGenVPt_MeanResPts_COUNTS[algoIter][centPos][etaPos[jtPtEtaIter]][qgPos[qgIter]][jtIter2]++;
+		  break;
+		}
 	      }
 	    }
 	  }
+	  
+	  if(refPt_[algoIter][jtIter] > config.GetJtEtaPtThresh()){
+	    for(Int_t qgIter = 0; qgIter < 2; qgIter++){
+	      if(qgPos[qgIter] == -1) continue;
+	      
+	      for(Int_t jtIter2 = 0; jtIter2 < nJtEtaBins; jtIter2++){
+		if(refEta_[algoIter][jtIter] > jtEtaBins[jtIter2] && refEta_[algoIter][jtIter] < jtEtaBins[jtIter2+1]){
+		  jtRecoOverGenVEta_MeanResPts_p[algoIter][centPos][qgPos[qgIter]][jtIter2]->Fill(jtPt_[algoIter][jtIter]/refPt_[algoIter][jtIter], qgWeight*hiBinWeight*truncPtHatWeight);
+		  jtRecoOverGenVEta_MeanResPts_COUNTS[algoIter][centPos][qgPos[qgIter]][jtIter2]++;
+		  break;
+		}
+	      }
+	    }
+	  } 
 	}
 
 	for(Int_t jtIter = 0; jtIter < nGenJt_[algoIter]; jtIter++){
-	  if(TMath::Abs(genJtEta_[algoIter][jtIter]) > 4.9) continue;
+	  if(TMath::Abs(genJtEta_[algoIter][jtIter]) > config.GetJtEtaMax()) continue;
 	  if(genJtPt_[algoIter][jtIter] < 5.0) continue;
-          if(config.GetJtWeight(pthatIter, genJtPt_[algoIter][jtIter]) < .1) continue;
+          if(config.GetJtWeight(pthatIter, genJtPt_[algoIter][jtIter], genJtEta_[algoIter][jtIter]) < .1) continue;
 	  
 	  genJtPtPerPthat_p[algoIter][centPos][0][pthatIter]->Fill(genJtPt_[algoIter][jtIter]);
 	}
@@ -444,34 +906,188 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
     inFile_p->Close();
   }    
 
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+
+      for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins+1; jtPtEtaIter++){
+
+	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	  for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	    Float_t tempMean[nMeanFit];
+	    Float_t tempMeanErr[nMeanFit];
+	    Float_t tempRes[nMeanFit];
+	    Float_t tempResErr[nMeanFit];
+	    
+	    tempMean[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMean();
+	    tempMeanErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMeanError();	
+	    tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDev();
+	    tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDevError();
+	    
+	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
+	    
+	    FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true/*config.GetDoWeights()*/);
+	    
+	    for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	      jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	      jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	    }
+	  }
+	}
+      }
+
+      if(debugMode) std::cout << __LINE__ << std::endl;
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
-	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
 	  Float_t tempMean[nMeanFit];
 	  Float_t tempMeanErr[nMeanFit];
 	  Float_t tempRes[nMeanFit];
 	  Float_t tempResErr[nMeanFit];
 
-	  tempMean[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
-	  tempMeanErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();	
-	  tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
-	  tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
+	  tempMean[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMean();
+	  tempMeanErr[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMeanError();	
+	  tempRes[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDev();
+	  tempResErr[0] = jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetStdDevError();
 	  
-	  FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1]);
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
+	  if(jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][qgIter][jtIter] < 300. || jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Rebin(2);
+
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
+	  FitGauss(jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true/*config.GetDoWeights()*/);
+
+	  if(debugMode) std::cout << __LINE__ << std::endl;
 	
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	    jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
-	    jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
-	    jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
-	    jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	    jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
+	    jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
+	    jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
+	    jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
 	  }
+
+	  if(debugMode) std::cout << __LINE__ << std::endl;
 	}
+
+	if(debugMode) std::cout << __LINE__ << std::endl;
+
       }
     }
   }
 
+  if(debugMode) std::cout << __LINE__ << std::endl;    
+
   outFile_p->cd();
+
+  TDirectory* dir_p = outFile_p->GetDirectory("ptHatDir");
+  if(dir_p){
+    dir_p->cd();
+  }
+  else{
+    dir_p = outFile_p->mkdir("ptHatDir");
+    dir_p->cd();
+  }
+
+  ptHat_Unweighted_h->Write("", TObject::kOverwrite);
+  ptHat_Weighted_h->Write("", TObject::kOverwrite);
+  
+  for(unsigned int iter = 0; iter < nPtHats; iter++){
+    ptHat_Unweighted_PerPthat_h[iter]->Write("", TObject::kOverwrite);
+
+    unsigned int scalePos = ptHat_Weighted_PerPthat_h[iter]->GetMaximumBin();
+    Double_t scaleVal = ptHat_Weighted_h->GetBinContent(scalePos);
+
+    ptHat_Unweighted_PerPthat_h[iter]->Scale(scaleVal/ptHat_Unweighted_PerPthat_h[iter]->GetMaximum());
+
+    std::string nameUnweighted = "ptHat_Unweighted_PerPthat_" + std::to_string(config.GetPthat(iter)) + "_RescaleToWeighted_h";
+
+    ptHat_Unweighted_PerPthat_h[iter]->Write(nameUnweighted.c_str(), TObject::kOverwrite);
+
+    delete ptHat_Unweighted_PerPthat_h[iter];
+
+    ptHat_Weighted_PerPthat_h[iter]->Write("", TObject::kOverwrite);
+    delete ptHat_Weighted_PerPthat_h[iter];
+  }
+
+  delete ptHat_Unweighted_h;
+  delete ptHat_Weighted_h;
+
+  outFile_p->cd();
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  if(config.GetIsGammaJet()){
+    TDirectory* dir_p = outFile_p->GetDirectory("phoDir");
+    if(dir_p){
+      dir_p->cd();
+    }
+    else{
+      dir_p = outFile_p->mkdir("phoDir");
+      dir_p->cd();
+    }
+
+    for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+      std::string centStr = "PP";
+      if(config.GetIsPbPb()) centStr = "Cent" + std::to_string(config.GetCentBinFromPos(centIter)) + "to" + std::to_string(config.GetCentBinFromPos(centIter+1));
+
+      std::string genNameUnweighted = "genPhoPt_Unweighted_Rescale_" + centStr + "_h";
+      std::string genNameWeighted = "genPhoPt_Weighted_Rescale_" + centStr + "_h";
+
+      std::string recoNameUnweighted = "recoPhoPt_Unweighted_Rescale_" + centStr + "_h";
+      std::string recoNameWeighted = "recoPhoPt_Weighted_Rescale_" + centStr + "_h";
+      
+      genPhoPt_Unweighted_h[centIter]->Write("", TObject::kOverwrite);
+      genPhoPt_Weighted_h[centIter]->Write("", TObject::kOverwrite);
+
+      recoPhoPt_Unweighted_h[centIter]->Write("", TObject::kOverwrite);
+      recoPhoPt_Weighted_h[centIter]->Write("", TObject::kOverwrite);
+
+      genPhoPt_Unweighted_h[centIter]->Scale(1./genPhoPt_Unweighted_h[centIter]->Integral());
+      genPhoPt_Weighted_h[centIter]->Scale(1./genPhoPt_Weighted_h[centIter]->Integral());
+
+      recoPhoPt_Unweighted_h[centIter]->Scale(1./recoPhoPt_Unweighted_h[centIter]->Integral());
+      recoPhoPt_Weighted_h[centIter]->Scale(1./recoPhoPt_Weighted_h[centIter]->Integral());
+
+      genPhoPt_Unweighted_h[centIter]->Write(genNameUnweighted.c_str(), TObject::kOverwrite);
+      genPhoPt_Weighted_h[centIter]->Write(genNameWeighted.c_str(), TObject::kOverwrite);
+
+      recoPhoPt_Unweighted_h[centIter]->Write(recoNameUnweighted.c_str(), TObject::kOverwrite);
+      recoPhoPt_Weighted_h[centIter]->Write(recoNameWeighted.c_str(), TObject::kOverwrite);
+
+      delete genPhoPt_Unweighted_h[centIter];
+      delete genPhoPt_Weighted_h[centIter];
+
+      delete recoPhoPt_Unweighted_h[centIter];
+      delete recoPhoPt_Weighted_h[centIter];
+    }
+  }
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  outFile_p->cd();
+
+  TF1* csn_p = new TF1("csn_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
+  csn_p->FixParameter(0, 0.061);
+  csn_p->FixParameter(1, 1.24);
+  csn_p->FixParameter(2, 8.08);
+
+
+  TF1* csn2_p = new TF1("csn2_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
+  csn2_p->FixParameter(0, 0.061 - .001);
+  csn2_p->FixParameter(1, 1.24 - .04);
+  csn2_p->FixParameter(2, 8.08 - .15);
+
+
+  TF1* csn3_p = new TF1("csn3_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
+  csn3_p->FixParameter(0, 0.061 + .001);
+  csn3_p->FixParameter(1, 1.24 + .04);
+  csn3_p->FixParameter(2, 8.08 + .15);
+
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo.at(iter).c_str()));
@@ -484,28 +1100,66 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
     }
 
 
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	jtRecoVGen_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 	jtRecoOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
-
+	
 	for(unsigned int pthatIter = 0; pthatIter < nPtHats; pthatIter++){
 	  genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter]->Write("", TObject::kOverwrite);
 	}
 
-	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
-	  jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
-	}
+	if(debugMode) std::cout << __LINE__ << std::endl;
 	
-	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	  jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins+1; jtPtEtaIter++){
+	    jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+
+	    if(mIter == 1 && qgIter == 0 && centIter == 0 && jtPtEtaIter == 0){
+	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn_p", "Q", "", 30, 150);
+	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn2_p", "Q", "", 30, 150);
+	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn3_p", "Q", "", 30, 150);
+	    }
+
+	    jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  }
+
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
+	  jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	  jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	}
+
+	if(debugMode) std::cout << __LINE__ << std::endl;
+	
+	for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins+1; jtPtEtaIter++){
+	  for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	  }
+	}
+
+	if(debugMode) std::cout << __LINE__ << std::endl;
+	  
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter]->Write("", TObject::kOverwrite);
+	}	
       }
     }
   }
 
+
+  delete csn_p;
+  delete csn2_p;
+  delete csn3_p;
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+  
   config.WriteConfigParamsToRootFile(outFile_p);
+
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
@@ -518,20 +1172,50 @@ int makeJECHist_Prototype(const std::string inConfigFileName)
           delete genJtPtPerPthat_p[iter][centIter][qgIter][pthatIter];
         }
 
-	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
-	  delete jtRecoOverGenVPt_Mean_p[iter][centIter][qgIter][mIter];
-	  delete jtRecoOverGenVPt_Res_p[iter][centIter][qgIter][mIter];
+	if(debugMode) std::cout << __LINE__ << std::endl;
+
+	for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins+1; jtPtEtaIter++){
+	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	    delete jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
+	    delete jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
+	  }
+
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
+	  for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
+	    delete jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter];
+	  }
 	}
 
-	for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
-	  delete jtRecoOverGenVPt_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	if(debugMode) std::cout << __LINE__ << std::endl;
+
+	for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
+	  delete jtRecoOverGenVEta_Mean_p[iter][centIter][qgIter][mIter];
+	  delete jtRecoOverGenVEta_Res_p[iter][centIter][qgIter][mIter];
 	}
+	if(debugMode) std::cout << __LINE__ << std::endl;
+	
+	for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
+	  delete jtRecoOverGenVEta_MeanResPts_p[iter][centIter][qgIter][jtIter];
+	}
+
+
       }
     }
+  }
+
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  for(unsigned int iter = 0; iter < nInputs; iter++){
+    std::cout << "Input " << iter << ": " << inputCounts[iter] << std::endl;
   }
     
   outFile_p->Close();
   delete outFile_p;
+
+  ratioFile_p->Close();
+  delete ratioFile_p;
 
   return 0;
 }

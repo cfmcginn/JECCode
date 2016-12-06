@@ -1,0 +1,36 @@
+#Valid types are DIJET, GAMMAJET, ZJET
+EVENTTYPE=ZJET
+OUTNAME=outFile_ZJet
+
+NPTHAT = 1
+PTHAT = 0
+
+INPUT= 0,/mnt/hadoop/cms/store/user/tatar/official/Pythia8_Z30mumuJet_Hydjet_MB/HINPbPbWinter16DR-75X_mcRun2_HeavyIon_v13-v1-FOREST/0.root,/mnt/hadoop/cms/store/user/tatar/official/Pythia8_Z30eeJet_Hydjet_MB/HINPbPbWinter16DR-75X_mcRun2_HeavyIon_v13-v1-FOREST/0.root
+
+ISPBPB = TRUE
+
+#Jet type filter: will and strings separated by *, ! will exclude, EX: ak*4*!Calo will grab all ak R= 0.4 jets# that are non-Calo
+JETTYPES=akPu3*PF
+
+#Parameters governing x-axis range + ptbinning
+NJTPTBINS = 12
+JTPTLOW = 30
+JTPTHI = 150.
+DOJTPTLOGBINS = TRUE
+JTETAMAX = 1.6
+JTETAPTTHRESH = 30
+JTETABINS = 16
+JTETAPTBINS = 3
+
+#Parameters governing how pthats fit together
+DOWEIGHTS = FALSE
+DOPTHATSTAGGER = TRUE
+STAGGEROFFSET = 0.
+
+#Centrality binning
+NCENTBINS = 2
+CENTBINS = 100, 30, 0
+
+#GAMMAJET specific cuts
+MINGAMMAPT=35
+GAMMAPTHATSTAGGER=0

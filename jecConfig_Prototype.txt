@@ -1,0 +1,51 @@
+#Valid types are DIJET, GAMMAJET, ZJET
+EVENTTYPE=GAMMAJET
+OUTNAME=outFile_GammaJet
+
+NPTHAT = 5
+PTHAT = 15,30,50,80,120
+
+#INPUT= 30,/mnt/hadoop/cms/store/user/abaty/mergedForests/PYTHIA_QCD_TuneCUETP8M1_cfi_GEN_SIM_5020GeV_ppSignal/Pythia8_Dijet30_pp_TuneCUETP8M1_5020GeV_FOREST_758_PrivMC/0.root
+#INPUT= 15,/mnt/hadoop/cms/store/user/abaty/mergedForests/PYTHIA_QCD_TuneCUETP8M1_cfi_GEN_SIM_5020GeV_ppSignal/Pythia8_Dijet15_pp_TuneCUETP8M1_5020GeV_FOREST_758_PrivMC/0.root
+#INPUT= 50,/mnt/hadoop/cms/store/user/abaty/mergedForests/PYTHIA_QCD_TuneCUETP8M1_cfi_GEN_SIM_5020GeV_ppSignal/Pythia8_Dijet50_pp_TuneCUETP8M1_5020GeV_FOREST_758_PrivMC/0.root
+#INPUT= 80,/mnt/hadoop/cms/store/user/abaty/mergedForests/PYTHIA_QCD_TuneCUETP8M1_cfi_GEN_SIM_5020GeV_ppSignal/Pythia8_Dijet80_pp_TuneCUETP8M1_5020GeV_FOREST_758_PrivMC/0.root
+
+#INPUT= 30,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+#INPUT= 15,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet15_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+#INPUT= 50,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet50_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+#INPUT= 80,/mnt/hadoop/cms/store/user/rbi/merged/dgulhan-Pythia8_Dijet80_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28/0.root 
+
+
+INPUT= 30,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon30_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_v13-v1_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon30_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_ext1/0.root
+
+INPUT= 50,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon50_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon50_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_ext1/0.root
+
+INPUT= 15,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon15_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon15_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_ext1/0.root
+
+INPUT= 80,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon80_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon80_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_ext1/0.root
+
+INPUT=120,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon120_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/Pythia8_Photon120_Hydjet_MB-HINPbPbWinter16DR-75X_mcRun2_HeavyIon_forest_ext1/0.root
+
+ISPBPB = TRUE
+
+#Jet type filter: will and strings separated by *, ! will exclude, EX: ak*4*!Calo will grab all ak R= 0.4 jets# that are non-Calo
+JETTYPES=akPu3*PF
+
+#Parameters governing x-axis range + ptbinning
+NJTPTBINS = 10
+JTPTLOW = 30.
+JTPTHI = 130.
+DOJTPTLOGBINS = FALSE
+
+#Parameters governing how pthats fit together
+DOWEIGHTS = TRUE
+DOPTHATSTAGGER = FALSE
+STAGGEROFFSET = 10.
+
+#Centrality binning
+NCENTBINS = 4
+CENTBINS = 100, 50, 30, 10, 0
+
+#GAMMAJET specific cuts
+MINGAMMAPT=35
+GAMMAPTHATSTAGGER=0

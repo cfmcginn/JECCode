@@ -23,6 +23,8 @@
 
 class jecConfigParser{
  private:
+  const static unsigned int nEventTypes = 3;
+  const std::string validEventTypes[nEventTypes] = {"DIJET", "GAMMAJET", "ZJET"};
   const static unsigned int nMaxPtHat = 10;
   const std::string txtStr = ".txt";
   const std::string numStr = "0123456789";
@@ -35,19 +37,145 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 12;
-  enum configIter {NPTHAT, PTHAT, INPUT, ISPBPB, JETTYPES, NJTPTBINS, JTPTLOW, JTPTHI, DOJTPTLOGBINS, DOWEIGHTS, DOPTHATSTAGGER, STAGGEROFFSET};
-  const std::string validConfigVals[nValidConfigVals] = {"NPTHAT", "PTHAT", "INPUT", "ISPBPB", "JETTYPES", "NJTPTBINS", "JTPTLOW", "JTPTHI", "DOJTPTLOGBINS", "DOWEIGHTS", "DOPTHATSTAGGER", "STAGGEROFFSET"};
+  const static unsigned int nValidConfigVals = 24;
+  enum configIter {EVENTTYPE, //0
+		   OUTNAME, //1
+		   NPTHAT, //2
+		   PTHAT, //3
+		   INPUT, //4
+		   ISPBPB, //5
+		   JETTYPES, //6
+		   NJTPTBINS, //7
+		   JTPTLOW, //8
+		   JTPTHI, //9
+		   JTETAMAX, //10
+		   JTETAPTTHRESH, //11
+		   JTETABINS, //12
+		   JTETAPTBINS, //13
+		   DOJTPTLOGBINS, //14
+		   DOWEIGHTS, //15
+		   DOWEIGHTTRUNC, //16
+		   PTHATWEIGHTS, //17
+		   DOPTHATSTAGGER, //18
+		   STAGGEROFFSET, //19
+		   NCENTBINS, //20
+		   CENTBINS, //21
+		   MINGAMMAPT, //22
+		   GAMMAPTHATSTAGGER}; //23
+ 
+  const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
+							 "OUTNAME", //1
+							 "NPTHAT", //2
+							 "PTHAT", //3
+							 "INPUT", //4
+							 "ISPBPB", //5
+							 "JETTYPES", //6
+							 "NJTPTBINS", //7
+							 "JTPTLOW", //8
+							 "JTPTHI", //9
+							 "JTETAMAX", //10
+							 "JTETAPTTHRESH", //11
+							 "JTETABINS", //12
+							 "JTETAPTBINS", //13
+							 "DOJTPTLOGBINS", //14
+							 "DOWEIGHTS", //15
+							 "DOWEIGHTTRUNC", //16
+							 "PTHATWEIGHTS", //17
+							 "DOPTHATSTAGGER", //18
+							 "STAGGEROFFSET", //19
+							 "NCENTBINS", //20
+							 "CENTBINS", //21
+							 "MINGAMMAPT", //22
+							 "GAMMAPTHATSTAGGER"}; //23
 
-  const std::string defaultConfigInputs[nValidConfigVals] = {"", "", "", "FALSE", "", "", "30", "100", "FALSE", "FALSE", "TRUE", "20"};
-  unsigned int nConfigInputs[nValidConfigVals] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  std::string configInputs[nValidConfigVals] = {"", "", "", "", "", "", "", "", "", "", "", ""};
-  std::string configFileName = "";
+  const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
+							     "", //1
+							     "", //2
+							     "", //3
+							     "", //4
+							     "FALSE", //5
+							     "", //6
+							     "", //7
+							     "30", //8
+							     "100", //9
+							     "1.6", //10
+							     "35", //11
+							     "16", //12
+							     "3", //13
+							     "FALSE", //14
+							     "FALSE", //15
+							     "FALSE", //16
+							     "", //17
+							     "TRUE", //18
+							     "20", //19
+							     "2", //20
+							     "100,30,0", //21
+							     "40.", //22
+							     "0."}; //23
+
+  unsigned int nConfigInputs[nValidConfigVals] = {0, //0
+						  0, //1
+						  0, //2
+						  0, //3
+						  0, //4
+						  0, //5
+						  0, //6
+						  0, //7
+						  0, //8
+						  0, //9
+						  0, //10
+						  0, //11
+						  0, //12
+						  0, //13
+						  0, //14
+						  0, //15
+						  0, //16
+						  0, //17
+						  0, //18
+						  0, //19
+						  0, //20
+						  0, //21
+						  0, //22
+						  0}; //23
   
+
+  std::string configInputs[nValidConfigVals] = {"", //0
+						"", //1
+						"", //2
+						"", //3
+						"", //4
+						"", //5
+						"", //6
+						"", //7
+						"", //8
+						"", //9
+						"", //10
+						"", //11
+						"", //12
+						"", //13
+						"", //14
+						"", //15
+						"", //16
+						"", //17
+						"", //18
+						"", //19
+						"", //20
+						"", //21
+						"", //22
+						""}; //23
+
+  std::string configFileName = "";
+  std::string eventTypeStr = "";
+  std::string outNameStr = "";
+  bool isDijet = false;
+  bool isGammaJet = false;
+  bool isZJet = false;
 
   unsigned int nPthats = 0;
   std::vector<unsigned int> pthats;
   std::vector<std::string> inputStrings;
+  std::vector<unsigned int> inputFilePtHats;
+  std::vector<std::string> inputFileList;
   bool isPbPb = false;
 
   std::string jetTypes = "";
@@ -60,9 +188,22 @@ class jecConfigParser{
   float jtPtHi = 100.;
   bool doJtPtLogBins = false;
 
+  float jtEtaMax = 1.6;
+  float jtEtaPtThresh = 35;
+  unsigned int jtEtaBins = 16;
+  unsigned int jtPtEtaBins = 3;
+
   bool doWeights = false;
+  bool doWeightTrunc = false;
+  std::vector<double> pthatWeights;
   bool doPthatStagger = true;
   float staggerOffset = 20.;
+
+  int nCentBins = 2;
+  std::vector<unsigned int> centBins = {100, 30, 0};
+
+  float minGammaPt = 40.;
+  float gammaPtHatStagger = 0.;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -74,11 +215,19 @@ class jecConfigParser{
   bool SetConfigParser(const std::string);
   void ResetConfigParser();
   std::string GetConfigFileName();
+  std::string GetEventType();
+  std::string GetOutName();
+  bool GetIsDijet();
+  bool GetIsGammaJet();
+  bool GetIsZJet();
   unsigned int GetNPthats();
+  unsigned int GetNInputs();
   unsigned int GetPthat(const unsigned int);
   void PrintPthats();
   void PrintInputs();
   std::string GetInput(const unsigned int);
+  unsigned int GetInputPtHat(const unsigned int);
+  unsigned int GetInputPtHatPos(const unsigned int);
   bool GetIsPbPb();
   std::string GetJetTypes();
   void PrintJetTypesKeep();
@@ -89,9 +238,25 @@ class jecConfigParser{
   float GetJtPtLow();
   float GetJtPtHi();
   bool GetDoJtPtLogBins();
+  float GetJtEtaMax();
+  float GetJtEtaPtThresh();
+  unsigned int GetJtEtaBins();
+  unsigned int GetJtPtEtaBins();
   bool GetDoWeights();
+  bool GetDoWeightTrunc();
   bool GetDoPthatStagger();
-  float GetJtWeight(const unsigned int, const float);
+  float GetJtWeight(const unsigned int, const float, const float, const float);
+  double GetPtHatWeight(const float);
+  double GetTruncPtHatWeight(const float, const float);
+  unsigned int GetNCentBins();
+  std::vector<unsigned int> GetCentBins();
+  unsigned int GetCentBinFromPos(const unsigned int);
+  unsigned int GetCentBinFromCent(const unsigned int);
+  unsigned int GetCentBinFromHiBin(const unsigned int);
+  void PrintCentBins();
+  float GetMinGammaPt();
+  float GetGammaPtHatStagger();
+
   void WriteConfigParamsToRootFile(TFile*);
 };
 
@@ -184,6 +349,13 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       if(alphaLowerStr.find(tempStr.at(iter)) != std::string::npos) tempStr.replace(iter, 1, alphaUpperStr.substr(alphaLowerStr.find(tempStr.at(iter)), 1));
     }
 
+    if(tempStr.substr(0, validConfigVals[EVENTTYPE].size()).find(validConfigVals[EVENTTYPE]) != std::string::npos){
+      eventTypeStr = valStr;
+    }
+
+    if(tempStr.substr(0, validConfigVals[OUTNAME].size()).find(validConfigVals[OUTNAME]) != std::string::npos){
+      outNameStr = valStr;
+    }
 
     if(tempStr.substr(0, validConfigVals[NPTHAT].size()).find(validConfigVals[NPTHAT]) != std::string::npos){
       if(valStr.find("-") != std::string::npos){ // check if negative
@@ -223,7 +395,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	nConfigInputs[NPTHAT]++;
       }
     }
-    if(tempStr.substr(0, validConfigVals[PTHAT].size()).find(validConfigVals[PTHAT]) != std::string::npos){
+    if(tempStr.size() == validConfigVals[PTHAT].size() && tempStr.substr(0, validConfigVals[PTHAT].size()).find(validConfigVals[PTHAT]) != std::string::npos){
       while(valStr.find(",,") != std::string::npos){
 	valStr.replace(valStr.find(",,"), 2, ",");
       }
@@ -268,7 +440,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Please give \'TRUE\' or \'FALSE\'. Return false" << std::endl;
 	
 	ResetConfigParser();
-
+	
 	return false;
       }
       
@@ -404,7 +576,115 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
       if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
       else doJtPtLogBins = false;
-    }    
+    }  
+
+    if(tempStr.substr(0, validConfigVals[JTETAMAX].size()).find(validConfigVals[JTETAMAX]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtEtaMax = 1.6;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
+	jtEtaMax = 1.6;
+	continue;
+      }
+      // setting
+      configInputs[JTETAMAX] = valStr;
+      nConfigInputs[JTETAMAX]++;
+      jtEtaMax = std::stof(valStr);
+    }
+
+
+
+    if(tempStr.substr(0, validConfigVals[JTETAPTTHRESH].size()).find(validConfigVals[JTETAPTTHRESH]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtEtaPtThresh = 35;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
+	jtEtaPtThresh = 35;
+	continue;
+      }
+      // setting
+      configInputs[JTETAPTTHRESH] = valStr;
+      nConfigInputs[JTETAPTTHRESH]++;
+      jtEtaPtThresh = std::stof(valStr);
+    }
+
+
+
+    if(tempStr.substr(0, validConfigVals[JTETABINS].size()).find(validConfigVals[JTETABINS]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtEtaBins = 16;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to default" << std::endl;
+	jtEtaBins = 16;
+	continue;
+      }
+      // setting
+      configInputs[JTETABINS] = valStr;
+      nConfigInputs[JTETABINS]++;
+      jtEtaBins = std::stof(valStr);
+    }
+
+
+
+    if(tempStr.substr(0, validConfigVals[JTETAPTBINS].size()).find(validConfigVals[JTETAPTBINS]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+	jtPtEtaBins = 3;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to default" << std::endl;
+	jtPtEtaBins = 3;
+	continue;
+      }
+      // setting
+      configInputs[JTETAPTBINS] = valStr;
+      nConfigInputs[JTETAPTBINS]++;
+      jtPtEtaBins = std::stof(valStr);
+    }
+
+
 
     if(tempStr.substr(0, validConfigVals[DOWEIGHTS].size()).find(validConfigVals[DOWEIGHTS]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
@@ -420,6 +700,54 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
       if(parseTrueFalseStr(valStr)) doWeights = true;
       else doWeights = false;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOWEIGHTTRUNC].size()).find(validConfigVals[DOWEIGHTTRUNC]) != std::string::npos){
+      if(!isTrueFalseStr(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
+	
+	doWeightTrunc = false;
+
+	continue;
+      }
+
+      configInputs[DOWEIGHTTRUNC] = valStr;
+      nConfigInputs[DOWEIGHTTRUNC]++;
+
+      if(parseTrueFalseStr(valStr)) doWeightTrunc = true;
+      else doWeightTrunc = false;
+    }
+
+    if(tempStr.substr(0, validConfigVals[PTHATWEIGHTS].size()).find(validConfigVals[PTHATWEIGHTS]) != std::string::npos){
+      while(valStr.find(",,") != std::string::npos){
+	valStr.replace(valStr.find(",,"), 2, ",");
+      }
+
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Return empty." << std::endl;
+	continue;
+      }
+      
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && commaStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \',\' or \'.\'. Return empty" << std::endl;
+	continue;
+      }
+      // setting
+      configInputs[PTHATWEIGHTS] = valStr;
+      nConfigInputs[PTHATWEIGHTS]++;
+
+      while(valStr.find(",") != std::string::npos){
+	pthatWeights.push_back(std::stof(valStr.substr(0, valStr.find(","))));
+	valStr.replace(0, valStr.find(",")+1, "");
+      }
+      if(valStr.size() != 0) pthatWeights.push_back(std::stof(valStr));
     }
 
     if(tempStr.substr(0, validConfigVals[DOPTHATSTAGGER].size()).find(validConfigVals[DOPTHATSTAGGER]) != std::string::npos){
@@ -462,6 +790,162 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       nConfigInputs[STAGGEROFFSET]++;
       staggerOffset = std::stof(valStr);
     }
+
+    if(tempStr.substr(0, validConfigVals[NCENTBINS].size()).find(validConfigVals[NCENTBINS]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative                                              
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+      else if(valStr.find(".") != std::string::npos){ // check if integer                                          
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+    
+      bool isNum = true; // check if number                                                                        
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+      // setting                                                                                                   
+      configInputs[NCENTBINS] = valStr;
+      nCentBins = (unsigned int)std::stoi(valStr);
+      nConfigInputs[NCENTBINS]++;
+    }
+
+    if(tempStr.substr(0, validConfigVals[CENTBINS].size()).find(validConfigVals[CENTBINS]) != std::string::npos){
+      while(valStr.find(",,") != std::string::npos){
+	valStr.replace(valStr.find(",,"), 2, ",");
+      }
+
+      if(valStr.find("-") != std::string::npos){ // check if negative
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Return empty." << std::endl;
+	continue;
+      }
+      else if(valStr.find(".") != std::string::npos){ // check if integer
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Return empty" << std::endl;
+	continue;
+      }
+
+      bool isNum = true; // check if number
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && commaStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \',\'. Return empty" << std::endl;
+	continue;
+      }
+      // setting
+      centBins.clear();
+      configInputs[CENTBINS] = valStr;
+      while(valStr.find(",") != std::string::npos){
+	centBins.push_back((unsigned int)std::stoi(valStr.substr(0, valStr.find(","))));
+	valStr.replace(0, valStr.find(",")+1, "");
+      }
+      if(valStr.size() != 0) centBins.push_back((unsigned int)std::stoi(valStr));
+
+      nConfigInputs[CENTBINS]++;      
+    }
+    
+    if(tempStr.substr(0, validConfigVals[GAMMAPTHATSTAGGER].size()).find(validConfigVals[GAMMAPTHATSTAGGER]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative                                              
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+    
+      bool isNum = true; // check if number                                                                        
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be single decimal number made of \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+      // setting                                                                                                   
+      configInputs[GAMMAPTHATSTAGGER] = valStr;
+      gammaPtHatStagger = std::stof(valStr);
+      nConfigInputs[GAMMAPTHATSTAGGER]++;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINGAMMAPT].size()).find(validConfigVals[MINGAMMAPT]) != std::string::npos){
+      if(valStr.find("-") != std::string::npos){ // check if negative                                              
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+    
+      bool isNum = true; // check if number                                                                        
+      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
+	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
+	  isNum = false;
+	  break;
+	}
+      }
+      if(!isNum){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be single decimal number made of \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
+	nCentBins = 0;
+	continue;
+      }
+      // setting                                                                                                   
+      configInputs[MINGAMMAPT] = valStr;
+      minGammaPt = std::stof(valStr);
+      nConfigInputs[MINGAMMAPT]++;
+    }
+  }
+
+  bool isGoodEventType = false;
+  for(unsigned int iter = 0; iter < nEventTypes; iter++){
+    if(eventTypeStr.size() == validEventTypes[iter].size() && eventTypeStr.find(validEventTypes[iter]) != std::string::npos){
+      isGoodEventType = true;
+      break;
+    }
+  }
+
+  if(!isGoodEventType){
+    std::cout << "EVENTTYPE, \'" << eventTypeStr << "\', is not a valid EVENTTYPE. Please pick from: ";
+    for(unsigned int iter = 0; iter < nEventTypes; iter++){
+      if(iter < nEventTypes-1) std::cout << validEventTypes[iter] << ", ";
+      else std::cout << validEventTypes[iter] << ".";
+    }
+    std::cout << " Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+  else{
+    if(eventTypeStr.find("DIJET") != std::string::npos) isDijet = true;
+    else if(eventTypeStr.find("GAMMAJET") != std::string::npos) isGammaJet = true;
+    else if(eventTypeStr.find("ZJET") != std::string::npos) isZJet = true;
+  }
+
+  if(outNameStr.size() == 0){
+    std::cout << "OUTNAME \'" << outNameStr << "\' is empty. return false" << std::endl;
+    ResetConfigParser();
+    return false;
+  }
+  else if(outNameStr.find(".") != std::string::npos && outNameStr.substr(outNameStr.size()-5, 5).find(".root") == std::string::npos){
+    std::cout << "OUTNAME \'" << outNameStr << "\' is not valid string, must end in \'.root\'. return false" << std::endl;
+    ResetConfigParser();
+    return false;
+  }
+  else if(outNameStr.substr(outNameStr.size()-5, 5).find(".root") == std::string::npos){
+    outNameStr = outNameStr + ".root";
   }
 
   if(nPthats == 0){
@@ -538,85 +1022,106 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
   }
 
   for(unsigned int pthatIter = 0; pthatIter < nPthats; pthatIter++){
+    std::cout << "Checking inputs... " << pthatIter+1 << "/" << nPthats << std::endl;
+
     inputStrings.at(pthatIter).replace(0, inputStrings.at(pthatIter).find(",")+1, "");
-    if(!checkFile(inputStrings.at(pthatIter))){
-      std::cout << "INPUT \'" << inputStrings.at(pthatIter) << "\' given for PTHAT==" << pthats.at(pthatIter) << " is not a valid file. Return false" << std::endl;
+    
+    std::string tempInputStr = inputStrings.at(pthatIter);
 
-      ResetConfigParser();
+    while(tempInputStr.size() != 0){
 
-      return false;
-    }
-    else{
-      //EDIT HERE
-      if(pthatIter == 0){
-	TFile* tempJetInFile_p = new TFile(inputStrings.at(pthatIter).c_str(), "READ");
-	jetTypesFinal = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
-	tempJetInFile_p->Close();
-	delete tempJetInFile_p;
-
-	unsigned int jetIterFinal = 0;
-	while(jetTypesFinal.size() > jetIterFinal){
-	  bool keepBool = true;
-
-	  for(unsigned int jetIterKeep = 0; jetIterKeep < jetTypesKeep.size(); jetIterKeep++){
-	    if(jetTypesFinal.at(jetIterFinal).find(jetTypesKeep.at(jetIterKeep)) == std::string::npos){
-	      jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
-	      keepBool = false;
-	      break;
-	    }
-	  }
-
-	  for(unsigned int jetIterRemove = 0; jetIterRemove < jetTypesRemove.size(); jetIterRemove++){
-	    if(jetTypesFinal.at(jetIterFinal).find(jetTypesRemove.at(jetIterRemove)) != std::string::npos){
-	      jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
-	      keepBool = false;
-	      break;
-	    }
-	  }
-
-	  if(keepBool) jetIterFinal++;
-	}
-
-	if(jetTypesFinal.size() == 0){
-	  std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << inputStrings.at(pthatIter) << "\'. return false." << std::endl;
-
-	  ResetConfigParser();
-
-	  return false;
-	}
+      std::string tempInputStr2 = "";
+      if(tempInputStr.find(",") != std::string::npos){
+	tempInputStr2 = tempInputStr.substr(0, tempInputStr.find(","));
+	tempInputStr.replace(0, tempInputStr.find(",")+1, "");
       }
       else{
-	std::vector<std::string> tempJetTypes;
+	tempInputStr2 = tempInputStr;
+	tempInputStr = "";
+      }
 
-        TFile* tempJetInFile_p = new TFile(inputStrings.at(pthatIter).c_str(), "READ");
-        tempJetTypes = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
-        tempJetInFile_p->Close();
-        delete tempJetInFile_p;
+      inputFileList.push_back(tempInputStr2);
+      inputFilePtHats.push_back(pthats.at(pthatIter));
 
-	unsigned int jetIterFinal = 0;
-        while(jetTypesFinal.size() > jetIterFinal){
-	  bool keepBool = false;
-
-	  for(unsigned int jetIterTemp = 0; jetIterTemp < tempJetTypes.size(); jetIterTemp++){
-	    if(jetTypesFinal.at(jetIterFinal).find(tempJetTypes.at(jetIterTemp)) != std::string::npos && jetTypesFinal.at(jetIterFinal).size() == tempJetTypes.at(jetIterTemp).size()){
-	      keepBool = true;
-	      break;
+      if(!checkFile(tempInputStr2)){
+	std::cout << "INPUT \'" << tempInputStr2 << "\' given for PTHAT==" << pthats.at(pthatIter) << " is not a valid file. Return false" << std::endl;
+	
+	ResetConfigParser();
+	
+	return false;
+      }
+      else{
+	if(pthatIter == 0){
+	  TFile* tempJetInFile_p = new TFile(tempInputStr2.c_str(), "READ");
+	  jetTypesFinal = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+	  tempJetInFile_p->Close();
+	  delete tempJetInFile_p;
+	  
+	  unsigned int jetIterFinal = 0;
+	  while(jetTypesFinal.size() > jetIterFinal){
+	    bool keepBool = true;
+	    
+	    for(unsigned int jetIterKeep = 0; jetIterKeep < jetTypesKeep.size(); jetIterKeep++){
+	      if(jetTypesFinal.at(jetIterFinal).find(jetTypesKeep.at(jetIterKeep)) == std::string::npos){
+		jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+		keepBool = false;
+		break;
+	      }
 	    }
+
+	    for(unsigned int jetIterRemove = 0; jetIterRemove < jetTypesRemove.size(); jetIterRemove++){
+	      if(jetTypesFinal.at(jetIterFinal).find(jetTypesRemove.at(jetIterRemove)) != std::string::npos){
+		jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+		keepBool = false;
+		break;
+	      }
+	    }
+	    
+	    if(keepBool) jetIterFinal++;
 	  }
 
-	  if(keepBool) jetIterFinal++;
-	  else{
-	    jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+
+	  if(jetTypesFinal.size() == 0){
+	    std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << tempInputStr2 << "\'. return false." << std::endl;
+	    
+	    ResetConfigParser();
+	  
+	    return false;
 	  }
 	}
+	else{
+	  std::vector<std::string> tempJetTypes;
+	  
+	  TFile* tempJetInFile_p = new TFile(tempInputStr2.c_str(), "READ");
+	  tempJetTypes = returnRootFileContentsList(tempJetInFile_p, "TTree", "JetAnalyzer");
+	  tempJetInFile_p->Close();
+	  delete tempJetInFile_p;
+	  
+	  unsigned int jetIterFinal = 0;
+	  while(jetTypesFinal.size() > jetIterFinal){
+	    bool keepBool = false;
+	    
+	    for(unsigned int jetIterTemp = 0; jetIterTemp < tempJetTypes.size(); jetIterTemp++){
+	      if(jetTypesFinal.at(jetIterFinal).find(tempJetTypes.at(jetIterTemp)) != std::string::npos && jetTypesFinal.at(jetIterFinal).size() == tempJetTypes.at(jetIterTemp).size()){
+		keepBool = true;
+	      break;
+	      }
+	    }
+	    
+	    if(keepBool) jetIterFinal++;
+	    else{
+	      jetTypesFinal.erase(jetTypesFinal.begin()+jetIterFinal);
+	    }
+	  }
+	
+	  if(jetTypesFinal.size() == 0){
+	    std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << tempInputStr2 << "\', after filtering on first file. return false." << std::endl;
 
-	if(jetTypesFinal.size() == 0){
-	  std::cout << "Given JETTYPES, \'" << jetTypes << "\', return no collections in file \'" << inputStrings.at(pthatIter) << "\', after filtering on first file. return false." << std::endl;
-
-          ResetConfigParser();
-
-          return false;
-        }
+	    ResetConfigParser();
+	    
+	    return false;
+	  }
+	}
       }
     }
   }
@@ -644,15 +1149,92 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
+
+  if(doWeights){
+    if(pthatWeights.size() != pthats.size()){
+      std::cout << "If DOWEIGHTS option selected, PTHATS size, \'" << pthats.size() << "\', must match PTHATWEIGHTS size, \'" << pthatWeights.size() << "\'. return false." << std::endl;
+      
+      ResetConfigParser();
+      
+      return false;
+    }
+    else{
+      unsigned int weightPos = 0;
+      while(weightPos < pthatWeights.size()){
+	bool doSwapWeight = false;
+
+	for(unsigned int weightIter = weightPos+1; weightIter < pthatWeights.size(); weightIter++){
+	  if(pthatWeights.at(weightIter) > pthatWeights.at(weightPos)){
+	    double tempWeight = pthatWeights.at(weightPos);
+	    pthatWeights.at(weightPos) = pthatWeights.at(weightIter);
+	    pthatWeights.at(weightIter) = tempWeight;
+	    
+	    doSwapWeight = true;
+	  }
+	}
+	
+	if(!doSwapWeight) weightPos++;
+      }
+    }
+  }
+
+  if(0 == nCentBins && isPbPb){
+    std::cout << "NCENTBINS, \'" << nCentBins << "\', is not a valid value. Return false." << std::endl;
+
+    ResetConfigParser();
+
+    return false;
+  }
+
+  if((int)centBins.size() != nCentBins+1 && isPbPb){
+    std::cout << "NCENTBINS, \'" << nCentBins << "\', is not equal to CENTBINS size \'" << centBins.size() << "\'. Return false." << std::endl;
+
+    ResetConfigParser();
+
+    return false;
+  }
+
+  if(isPbPb){
+    for(unsigned int centIter = 0; centIter < centBins.size(); centIter++){
+      if(centBins.at(centIter) > 100){
+	std::cout << "Input centBin, \'" << centBins.at(centIter) << "\', is not in 0-100 range. Return false" << std::endl;
+
+	ResetConfigParser();
+
+	return false;
+      }
+    }
+    unsigned int centPos = 0; 
+    while(centPos < centBins.size()){
+      Bool_t doSwap = false;
+      for(unsigned int centIter = centPos+1; centIter < centBins.size(); centIter++){
+	if(centBins.at(centPos) > centBins.at(centIter)){
+	  int tempCentBin = centBins.at(centPos);
+	  centBins.at(centPos) = centBins.at(centIter);
+	  centBins.at(centIter) = tempCentBin;
+	}
+      }
+
+      if(!doSwap) centPos++;
+    }
+  }
+
   return true;
 }
 
 void jecConfigParser::ResetConfigParser()
 {
   configFileName = "";
+  eventTypeStr = "";
+  outNameStr = "";
+  isDijet = false;
+  isGammaJet = false;
+  isZJet = false;
   nPthats = 0;
   pthats.clear();
   inputStrings.clear();
+  inputFileList.clear();
+  inputFilePtHats.clear();
   isPbPb = false;
   jetTypes = "";
   jetTypesKeep.clear();
@@ -661,10 +1243,23 @@ void jecConfigParser::ResetConfigParser()
   nJtPtBins = 0;
   jtPtLow = 30.;
   jtPtHi = 100.;
+  jtEtaMax = 1.6;
+  jtEtaPtThresh = 35;
+  jtEtaBins = 16;
+  jtPtEtaBins = 3;
   doJtPtLogBins = false;
   doWeights = false;
+  doWeightTrunc = false;
+  pthatWeights.clear();
   doPthatStagger = true;
   staggerOffset = 20.;
+  nCentBins = 2;
+  centBins.clear();
+  centBins.push_back(100);
+  centBins.push_back(30);
+  centBins.push_back(0);
+  minGammaPt = 40.;
+  gammaPtHatStagger = 0.;
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -675,7 +1270,13 @@ void jecConfigParser::ResetConfigParser()
 }
 
 std::string jecConfigParser::GetConfigFileName(){return configFileName;}
+std::string jecConfigParser::GetEventType(){return eventTypeStr;}
+std::string jecConfigParser::GetOutName(){return outNameStr;}
+bool jecConfigParser::GetIsDijet(){return isDijet;}
+bool jecConfigParser::GetIsGammaJet(){return isGammaJet;}
+bool jecConfigParser::GetIsZJet(){return isZJet;}
 unsigned int jecConfigParser::GetNPthats(){return nPthats;}
+unsigned int jecConfigParser::GetNInputs(){return inputFileList.size();}
 
 unsigned int jecConfigParser::GetPthat(unsigned int pos)
 {
@@ -715,14 +1316,39 @@ void jecConfigParser::PrintInputs()
 
 std::string jecConfigParser::GetInput(unsigned int pos)
 {
-  if(pos >= nPthats){
-    std::cout << "Requested input position, \'" << pos << "\', is >= nPthats, \'" << nPthats << "\'. Return empty string" << std::endl;
+  if(pos >= inputFileList.size()){
+    std::cout << "Requested input position, \'" << pos << "\', is >= fileList.size(), \'" << inputFileList.size() << "\'. Return empty string" << std::endl;
     return "";
   }
   
-  return inputStrings.at(pos);
+  return inputFileList.at(pos);
 }
 
+unsigned int jecConfigParser::GetInputPtHat(unsigned int pos)
+{
+  if(pos >= inputFilePtHats.size()){
+    std::cout << "Requested input pthat, \'" << pos << "\', is >= inputFilePtHats.size(), \'" << inputFilePtHats.size() << "\'. Return 10000" << std::endl;
+    return 10000;
+  }
+  
+  return inputFilePtHats.at(pos);
+}
+
+unsigned int jecConfigParser::GetInputPtHatPos(unsigned int pos)
+{
+  if(pos >= inputFilePtHats.size()){
+    std::cout << "Requested input pthat, \'" << pos << "\', is >= inputFilePtHats.size(), \'" << inputFilePtHats.size() << "\'. Return 10000" << std::endl;
+    return 10000;
+  }
+
+  unsigned int retPos = 100000;
+  
+  for(unsigned int iter = 0; iter < pthats.size(); iter++){
+    if(pthats.at(iter) == inputFilePtHats.at(pos)) retPos = iter;
+  }
+
+  return retPos;
+}
 
 bool jecConfigParser::GetIsPbPb(){return isPbPb;}
 std::string jecConfigParser::GetJetTypes(){return jetTypes;}
@@ -765,14 +1391,43 @@ unsigned int jecConfigParser::GetNJtPtBins(){return nJtPtBins;}
 float jecConfigParser::GetJtPtLow(){return jtPtLow;}
 float jecConfigParser::GetJtPtHi(){return jtPtHi;}
 bool jecConfigParser::GetDoJtPtLogBins(){return doJtPtLogBins;}
+float jecConfigParser::GetJtEtaMax(){return jtEtaMax;}
+float jecConfigParser::GetJtEtaPtThresh(){return jtEtaPtThresh;}
+unsigned int jecConfigParser::GetJtEtaBins(){return jtEtaBins;}
+unsigned int jecConfigParser::GetJtPtEtaBins(){return jtPtEtaBins;}
 bool jecConfigParser::GetDoWeights(){return doWeights;}
+bool jecConfigParser::GetDoWeightTrunc(){return doWeightTrunc;}
 bool jecConfigParser::GetDoPthatStagger(){return doPthatStagger;}
 
-float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt)
+float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt, const float jtEta, const float bosonPt = 0.)
 {
   if(jtPt < jtPtLow || jtPt > jtPtHi) return 0.;
 
+  if(TMath::Abs(jtEta) > jtEtaMax) return 0.;
+
+  if(isGammaJet && bosonPt < minGammaPt) return 0.;
+
+  int truePtHatPos = -1;
+  for(unsigned int iter = 0; iter < nPthats; iter++){
+    if(pthats.at(iter) == inputFilePtHats.at(pthatPos)) truePtHatPos = iter;
+  }
+
+  if(truePtHatPos == -1){
+    std::cout << "Pthat not found at jecConfigParser line " << __LINE__ << ". Return 0 weight" << std::endl;
+    return 0;
+  }
+
   float weight = 1.;
+
+  if(isZJet) return weight;
+
+  /*
+  if(truePtHatPos == 0) return 0.999565;
+  else if(truePtHatPos == 1) return 0.187379;
+  else if(truePtHatPos == 2) return 0.0434138;
+  else if(truePtHatPos == 3) return 0.0094069;
+  else if(truePtHatPos == 4) return 0.00211448;			      
+  */
 
   int jtPtBinPthatPos[nJtPtBins+1];
   double jtPtBins[nJtPtBins+1];
@@ -807,7 +1462,7 @@ float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt
     }
 
     if(jtPtBinPthatPos[jtPtPos] < 0) weight = 0.;
-    else if((unsigned int)jtPtBinPthatPos[jtPtPos] != pthatPos) weight = 0.;
+    else if(jtPtBinPthatPos[jtPtPos] != truePtHatPos) weight = 0.;
     else weight = 1.;    
   }
 
@@ -815,6 +1470,160 @@ float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt
 
   return weight;
 }
+
+
+double jecConfigParser::GetPtHatWeight(const float inPtHat)
+{
+  double weight = -1.;
+
+  if(!doWeights) return 1;
+
+  for(unsigned int iter = 0; iter < nPthats-1; iter++){
+    if(inPtHat < pthats.at(iter+1)){
+      weight = pthatWeights.at(iter);
+      break;
+    } 
+  }
+  if(inPtHat >= pthats.at(nPthats-1)) weight = pthatWeights.at(nPthats-1);
+
+  if(weight < 0){
+    std::cout << "No pthat found for pthat \'" << inPtHat << "\', weight returned is 0" << std::endl;
+    std::cout << "Available pthat bins: ";
+
+    for(unsigned int iter = 0; iter < pthats.size()-1; iter++){
+      std::cout << pthats.at(iter) << "-" << pthats.at(iter+1) << ", ";
+    }
+    std::cout << pthats.at(nPthats-2) << "-" << pthats.at(nPthats-1) << "." << std::endl;
+
+    weight = 0;
+  }
+
+  return weight;
+}
+
+
+double jecConfigParser::GetTruncPtHatWeight(const float inPtHat, const float inJtPt)
+{
+  double weight = -1.;
+
+  if(!doWeights) return 1;
+
+  if(!doWeightTrunc) return GetPtHatWeight(inPtHat);
+
+  int pthatPos = -1;
+
+  for(unsigned int iter = 0; iter < nPthats-1; iter++){
+    if(inPtHat < pthats.at(iter+1)){
+      pthatPos = iter;
+      break;
+    } 
+  }
+  if(inPtHat >= pthats.at(nPthats-1)) pthatPos = nPthats-1;
+
+  int jtPos = -1;
+
+  for(unsigned int iter = 0; iter < nPthats-1; iter++){
+    if(inJtPt < pthats.at(iter+1)){
+      jtPos = iter;
+      break;
+    } 
+  }
+  if(inJtPt >= pthats.at(nPthats-1)) jtPos = nPthats-1;
+
+  if(jtPos - pthatPos >= 2) weight = 0;
+  else weight = GetPtHatWeight(inPtHat);
+
+  return weight;
+}
+
+
+unsigned int jecConfigParser::GetNCentBins()
+{
+  if(isPbPb) return nCentBins;
+  else return 1;
+}
+
+std::vector<unsigned int> jecConfigParser::GetCentBins()
+{
+  std::vector<unsigned int> dummyVect;
+  if(isPbPb) return centBins;
+  else return dummyVect;
+}
+
+unsigned int jecConfigParser::GetCentBinFromPos(const unsigned int centPos)
+{
+  if(!isPbPb) return 0;
+  else{
+    if(centPos > centBins.size()){
+      std::cout << "Requested pos, \'" << centPos << "\', greater than number of bins. return 0." << std::endl;
+      return 0;
+    }
+    else return centBins.at(centPos);
+  }
+}
+
+unsigned int jecConfigParser::GetCentBinFromCent(const unsigned int cent)
+{
+  if(cent > 100){
+    std::cout << "Cent given, \'" << cent << "\', is not in allowed range 0-100%. Return 0"  << std::endl;
+    return 0;
+  }
+  
+  unsigned int centPos = 0;
+
+  if(isPbPb){
+    for(int centIter = 0; centIter < nCentBins; centIter++){
+      if(cent >= centBins[centIter] && cent < centBins[centIter+1]){
+	centPos = centIter;
+	break;
+      }
+    }
+  }
+
+  return centPos;
+}
+
+
+unsigned int jecConfigParser::GetCentBinFromHiBin(const unsigned int cent)
+{
+  if(cent > 200){
+    std::cout << "Hibin given, \'" << cent << "\', is not in allowed range 0-100% (0-200). Return 0"  << std::endl;
+    return 0;
+  }
+  
+  unsigned int centPos = 0;
+
+  if(isPbPb){
+    for(int centIter = 0; centIter < nCentBins; centIter++){
+      if(cent/2 >= centBins[centIter] && cent/2 < centBins[centIter+1]){
+	centPos = centIter;
+	break;
+      }
+    }
+  }
+
+  return centPos;
+}
+
+
+void jecConfigParser::PrintCentBins()
+{
+  std::cout << "Centbins: ";
+
+  for(unsigned int iter = 0; iter < centBins.size(); iter++){
+    if(iter < centBins.size()-1) std::cout << centBins.at(iter) << ", ";
+    else std::cout << centBins.at(iter) << ".";
+  }
+
+  std::cout << std::endl;
+
+  return;
+}
+
+
+float jecConfigParser::GetMinGammaPt(){return minGammaPt;}
+float jecConfigParser::GetGammaPtHatStagger(){return gammaPtHatStagger;}
+
 
 void jecConfigParser::WriteConfigParamsToRootFile(TFile* writeFile_p)
 {
