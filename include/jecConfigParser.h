@@ -30,6 +30,7 @@ class jecConfigParser{
   const std::string numStr = "0123456789";
   const std::string commaStr = ",";
   const std::string dotStr = ".";
+  const std::string minusStr = "-";
   const std::string alphaUpperStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const std::string alphaLowerStr = "abcdefghijklmnopqrstuvwxyz";
   const static unsigned int nValidTrueFalse = 2;
@@ -87,6 +88,33 @@ class jecConfigParser{
 							 "CENTBINS", //21
 							 "MINGAMMAPT", //22
 							 "GAMMAPTHATSTAGGER"}; //23
+
+
+  const std::string configTypes[nValidConfigVals] = {"std::string", //0
+						     "std::string", //1
+						     "unsigned int", //2
+						     "std::vector<unsigned int>", //3
+						     "std::vector<std::string>", //4
+						     "bool", //5
+						     "std::string", //6
+						     "unsigned int", //7
+						     "float", //8
+						     "float", //9
+						     "float", //10
+						     "float", //11
+						     "unsigned int", //12
+						     "unsigned int", //13
+						     "bool", //14
+						     "bool", //15
+						     "bool", //16
+						     "std::vector<float>", //17
+						     "bool", //18
+						     "float", //19
+						     "unsgined int", //20
+						     "std::vector<unsigned int>", //21
+						     "float", //22
+						     "float"}; //23
+  
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
 							     "", //1
@@ -212,6 +240,10 @@ class jecConfigParser{
  public:
   jecConfigParser();
   jecConfigParser(const std::string);
+  bool StringIsGoodFloat(const std::string);
+  bool StringIsGoodUFloat(const std::string);
+  bool StringIsGoodInt(const std::string);
+  bool StringIsGoodUInt(const std::string);
   bool SetConfigParser(const std::string);
   void ResetConfigParser();
   std::string GetConfigFileName();
@@ -252,7 +284,7 @@ class jecConfigParser{
   std::vector<unsigned int> GetCentBins();
   unsigned int GetCentBinFromPos(const unsigned int);
   unsigned int GetCentBinFromCent(const unsigned int);
-  unsigned int GetCentBinFromHiBin(const unsigned int);
+  int GetCentBinFromHiBin(const unsigned int);
   void PrintCentBins();
   float GetMinGammaPt();
   float GetGammaPtHatStagger();
@@ -275,6 +307,68 @@ jecConfigParser::jecConfigParser(const std::string inConfigFile)
   }
 
   return;
+}
+
+
+bool jecConfigParser::StringIsGoodFloat(std::string floatString)
+{
+  while(floatString.find(" ") != std::string::npos){
+    floatString.replace(floatString.find(" "), 1, "");
+  }
+
+  bool isNum = true; // check if number                                                                            
+  for(unsigned int iter = 0; iter < floatString.size(); iter++){
+    if(numStr.find(floatString.at(iter)) == std::string::npos && dotStr.find(floatString.at(iter)) == std::string::npos && minusStr.find(floatString.at(iter)) == std::string::npos){
+      isNum = false;
+      break;
+    }
+    else if(minusStr.find(floatString.at(iter)) != std::string::npos && iter != 0){
+      isNum = false;
+      break;
+    }
+  }
+  if(!isNum){
+    std::cout << floatString << "\' is invalid, must be number from \'" << numStr << "\' or \'" << dotStr << "\' or \'" << minusStr << "\'. If \'" << minusStr << "\', must be first char. return false" << std::endl;
+  }
+
+  return isNum;
+}
+
+bool jecConfigParser::StringIsGoodUFloat(const std::string floatString)
+{
+  bool isUFloat = StringIsGoodFloat(floatString);
+  if(!isUFloat) return isUFloat;
+
+  if(floatString.find(minusStr) != std::string::npos){
+    isUFloat = false;
+    std::cout << floatString << "\' is invalid, must be number from \'" << numStr << "\' or \'" << dotStr << "\', non-negative. return false" << std::endl;
+  }
+
+  return isUFloat;
+}
+
+bool jecConfigParser::StringIsGoodInt(const std::string intString)
+{
+  bool isInt = StringIsGoodFloat(intString);
+  if(!isInt) return isInt;
+
+  if(intString.find(dotStr) != std::string::npos){
+    std::cout << intString << "\' is invalid, must be number from \'" << numStr << "\' or \'" << minusStr << "\'. If \'" << minusStr << "\', must be first char. return false" << std::endl;
+    isInt = false;
+  }
+  return isInt;
+}
+
+bool jecConfigParser::StringIsGoodUInt(std::string intString)
+{
+  bool isUInt = StringIsGoodUFloat(intString);
+  if(!isUInt) return isUInt;
+
+  if(intString.find(dotStr) != std::string::npos && intString.find(dotStr) != intString.size()-1){
+    std::cout << intString << "\' is invalid, must be number from \'" << numStr << "\', non-negative and non-decimal. return false" << std::endl;
+    isUInt = false;
+  }
+  return isUInt;
 }
 
 bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
@@ -358,29 +452,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[NPTHAT].size()).find(validConfigVals[NPTHAT]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
-	nPthats = 0;
-	continue;
-      }
-      else if(valStr.find(".") != std::string::npos){ // check if integer
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Setting to 0" << std::endl;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 0." << std::endl;
         nPthats = 0;
-	continue;
+        continue;
       }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to 0" << std::endl;
-	nPthats = 0;
-	continue;
-      }
+
       // setting
       nPthats = (unsigned int)std::stoi(valStr);
 
@@ -396,30 +473,23 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       }
     }
     if(tempStr.size() == validConfigVals[PTHAT].size() && tempStr.substr(0, validConfigVals[PTHAT].size()).find(validConfigVals[PTHAT]) != std::string::npos){
+      valStr = valStr + ",";
       while(valStr.find(",,") != std::string::npos){
 	valStr.replace(valStr.find(",,"), 2, ",");
       }
 
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Return empty." << std::endl;
-	continue;
-      }
-      else if(valStr.find(".") != std::string::npos){ // check if integer
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Return empty" << std::endl;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && commaStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
+      std::string tempValStr = valStr;
+      bool isGoodString = true;
+      while(tempValStr.find(",") != std::string::npos){
+	if(!StringIsGoodUInt(tempValStr.substr(0, tempValStr.find(",")))){
+	  std::cout << tempStr << " value \'" << valStr << "\', specifically \'" << tempValStr.substr(0, tempValStr.find(",")) << "\' is invalid. Return empty." << std::endl;
+	  isGoodString = false;
 	  break;
 	}
+	else tempValStr.replace(0, tempValStr.find(",")+1, "");
       }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \',\'. Return empty" << std::endl;
-	continue;
-      }
+      if(!isGoodString) continue;
+
       // setting
       while(valStr.find(",") != std::string::npos){
 	pthats.push_back((unsigned int)std::stoi(valStr.substr(0, valStr.find(","))));
@@ -482,28 +552,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[NJTPTBINS].size()).find(validConfigVals[NJTPTBINS]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
-	nJtPtBins = 0;
-	continue;
-      }
-      else if(valStr.find(".") != std::string::npos){ // check if integer
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Setting to 0" << std::endl;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 0." << std::endl;
         nJtPtBins = 0;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to 0" << std::endl;
-	nJtPtBins = 0;
-	continue;
+        continue;
       }
       // setting
       configInputs[NJTPTBINS] = valStr;
@@ -511,26 +563,13 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       nConfigInputs[NJTPTBINS]++;
     }
 
-
     if(tempStr.substr(0, validConfigVals[JTPTLOW].size()).find(validConfigVals[JTPTLOW]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtPtLow = 30.;
-	continue;
+      if(!StringIsGoodUFloat(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 30." << std::endl;
+        jtPtLow = 30.;
+        continue;
       }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
-	jtPtLow = 30.;
-	continue;
-      }
+
       // setting
       configInputs[JTPTLOW] = valStr;
       nConfigInputs[JTPTLOW]++;
@@ -538,23 +577,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[JTPTHI].size()).find(validConfigVals[JTPTHI]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtPtHi = 100.;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
-	jtPtHi = 100.;
-	continue;
+      if(!StringIsGoodUFloat(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 100." << std::endl;
+        jtPtHi = 100.;
+        continue;
       }
       // setting
       configInputs[JTPTHI] = valStr;
@@ -565,37 +591,22 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[DOJTPTLOGBINS].size()).find(validConfigVals[DOJTPTLOGBINS]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
-	
 	doJtPtLogBins = false;
-
 	continue;
       }
-
+      
       configInputs[DOJTPTLOGBINS] = valStr;
       nConfigInputs[DOJTPTLOGBINS]++;
-
+      
       if(parseTrueFalseStr(valStr)) doJtPtLogBins = true;
       else doJtPtLogBins = false;
     }  
 
     if(tempStr.substr(0, validConfigVals[JTETAMAX].size()).find(validConfigVals[JTETAMAX]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtEtaMax = 1.6;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
-	jtEtaMax = 1.6;
-	continue;
+      if(!StringIsGoodUFloat(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 1.6." << std::endl;
+        jtEtaMax = 1.6;
+        continue;
       }
       // setting
       configInputs[JTETAMAX] = valStr;
@@ -606,23 +617,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
 
     if(tempStr.substr(0, validConfigVals[JTETAPTTHRESH].size()).find(validConfigVals[JTETAPTTHRESH]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtEtaPtThresh = 35;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
-	jtEtaPtThresh = 35;
-	continue;
+      if(!StringIsGoodUFloat(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 35." << std::endl;
+        jtEtaPtThresh = 35.;
+        continue;
       }
       // setting
       configInputs[JTETAPTTHRESH] = valStr;
@@ -631,25 +629,11 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
 
-
     if(tempStr.substr(0, validConfigVals[JTETABINS].size()).find(validConfigVals[JTETABINS]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtEtaBins = 16;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to default" << std::endl;
-	jtEtaBins = 16;
-	continue;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 16." << std::endl;
+        jtEtaBins = 16;
+        continue;
       }
       // setting
       configInputs[JTETABINS] = valStr;
@@ -658,25 +642,11 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
 
-
     if(tempStr.substr(0, validConfigVals[JTETAPTBINS].size()).find(validConfigVals[JTETAPTBINS]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
-	jtPtEtaBins = 3;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to default" << std::endl;
-	jtPtEtaBins = 3;
-	continue;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 3." << std::endl;
+        jtPtEtaBins = 3;
+        continue;
       }
       // setting
       configInputs[JTETAPTBINS] = valStr;
@@ -684,14 +654,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       jtPtEtaBins = std::stof(valStr);
     }
 
-
-
     if(tempStr.substr(0, validConfigVals[DOWEIGHTS].size()).find(validConfigVals[DOWEIGHTS]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
-	
 	doWeights = false;
-
 	continue;
       }
 
@@ -704,10 +670,8 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
     if(tempStr.substr(0, validConfigVals[DOWEIGHTTRUNC].size()).find(validConfigVals[DOWEIGHTTRUNC]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;
-	
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to false. Return false" << std::endl;	
 	doWeightTrunc = false;
-
 	continue;
       }
 
@@ -719,26 +683,23 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[PTHATWEIGHTS].size()).find(validConfigVals[PTHATWEIGHTS]) != std::string::npos){
+      valStr = valStr + ",";
       while(valStr.find(",,") != std::string::npos){
 	valStr.replace(valStr.find(",,"), 2, ",");
       }
 
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Return empty." << std::endl;
-	continue;
+      std::string tempValStr = valStr;
+      bool isGoodString = true;
+      while(tempValStr.find(",") != std::string::npos){
+        if(!StringIsGoodUFloat(tempValStr.substr(0, tempValStr.find(",")))){
+	  std::cout << tempStr << " value \'" << valStr << "\', specifically \'" << tempValStr.substr(0, tempValStr.find(",")) << "\' is invalid. Return empty." << std::endl;
+          isGoodString = false;
+          break;
+        }
+        else tempValStr.replace(0, tempValStr.find(",")+1, "");
       }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && commaStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \',\' or \'.\'. Return empty" << std::endl;
-	continue;
-      }
+      if(!isGoodString) continue;
+
       // setting
       configInputs[PTHATWEIGHTS] = valStr;
       nConfigInputs[PTHATWEIGHTS]++;
@@ -753,9 +714,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[DOPTHATSTAGGER].size()).find(validConfigVals[DOPTHATSTAGGER]) != std::string::npos){
       if(!isTrueFalseStr(valStr)){
 	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Defaulting to true. Return true" << std::endl;
-
 	doPthatStagger = true;
-
 	continue;
       }
 
@@ -767,23 +726,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[STAGGEROFFSET].size()).find(validConfigVals[STAGGEROFFSET]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to default" << std::endl;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 20." << std::endl;
 	staggerOffset = 20.;
-	continue;
-      }
-      
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \'.\'. Setting to default" << std::endl;
-	staggerOffset = 20.;
-	continue;
+        continue;
       }
       // setting
       configInputs[STAGGEROFFSET] = valStr;
@@ -792,28 +738,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[NCENTBINS].size()).find(validConfigVals[NCENTBINS]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative                                              
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
-      }
-      else if(valStr.find(".") != std::string::npos){ // check if integer                                          
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
-      }
-    
-      bool isNum = true; // check if number                                                                        
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\'. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 0." << std::endl;
+        nCentBins = 0;
+        continue;
       }
       // setting                                                                                                   
       configInputs[NCENTBINS] = valStr;
@@ -822,30 +750,22 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[CENTBINS].size()).find(validConfigVals[CENTBINS]) != std::string::npos){
+      valStr = valStr + ",";
       while(valStr.find(",,") != std::string::npos){
 	valStr.replace(valStr.find(",,"), 2, ",");
       }
+      std::string tempValStr = valStr;
+      bool isGoodString = true;
+      while(tempValStr.find(",") != std::string::npos){
+        if(!StringIsGoodUFloat(tempValStr.substr(0, tempValStr.find(",")))){
+	  std::cout << tempStr << " value \'" << valStr << "\', specifically \'" << tempValStr.substr(0, tempValStr.find(",")) << "\' is invalid. Return empty." << std::endl;
+          isGoodString = false;
+          break;
+        }
+        else tempValStr.replace(0, tempValStr.find(",")+1, "");
+      }
+      if(!isGoodString) continue;
 
-      if(valStr.find("-") != std::string::npos){ // check if negative
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Return empty." << std::endl;
-	continue;
-      }
-      else if(valStr.find(".") != std::string::npos){ // check if integer
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be integer (no \'.\'). Return empty" << std::endl;
-	continue;
-      }
-
-      bool isNum = true; // check if number
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && commaStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be pure number from \'" << numStr << "\' or \',\'. Return empty" << std::endl;
-	continue;
-      }
       // setting
       centBins.clear();
       configInputs[CENTBINS] = valStr;
@@ -859,24 +779,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
     
     if(tempStr.substr(0, validConfigVals[GAMMAPTHATSTAGGER].size()).find(validConfigVals[GAMMAPTHATSTAGGER]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative                                              
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
+      if(!StringIsGoodUInt(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 0." << std::endl;
+        gammaPtHatStagger = 0.;
+        continue;
       }
-    
-      bool isNum = true; // check if number                                                                        
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be single decimal number made of \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
-      }
+
       // setting                                                                                                   
       configInputs[GAMMAPTHATSTAGGER] = valStr;
       gammaPtHatStagger = std::stof(valStr);
@@ -884,23 +792,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[MINGAMMAPT].size()).find(validConfigVals[MINGAMMAPT]) != std::string::npos){
-      if(valStr.find("-") != std::string::npos){ // check if negative                                              
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be non-negative. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
-      }
-    
-      bool isNum = true; // check if number                                                                        
-      for(unsigned int iter2 = 0; iter2 < valStr.size(); iter2++){
-	if(numStr.find(valStr.at(iter2)) == std::string::npos && dotStr.find(valStr.at(iter2)) == std::string::npos){
-	  isNum = false;
-	  break;
-	}
-      }
-      if(!isNum){
-	std::cout << tempStr << " value \'" << valStr << "\' is invalid, must be single decimal number made of \'" << numStr << "\' or \'.\'. Setting to 0" << std::endl;
-	nCentBins = 0;
-	continue;
+      if(!StringIsGoodUFloat(valStr)){
+	std::cout << tempStr << " value \'" << valStr << "\' is invalid. Setting to 40." << std::endl;
+	minGammaPt = 40.;
+        continue;
       }
       // setting                                                                                                   
       configInputs[MINGAMMAPT] = valStr;
@@ -1530,7 +1425,7 @@ double jecConfigParser::GetTruncPtHatWeight(const float inPtHat, const float inJ
   }
   if(inJtPt >= pthats.at(nPthats-1)) jtPos = nPthats-1;
 
-  if(jtPos - pthatPos >= 2) weight = 0;
+  if(jtPos - pthatPos >= 1) weight = 0;
   else weight = GetPtHatWeight(inPtHat);
 
   return weight;
@@ -1584,21 +1479,18 @@ unsigned int jecConfigParser::GetCentBinFromCent(const unsigned int cent)
 }
 
 
-unsigned int jecConfigParser::GetCentBinFromHiBin(const unsigned int cent)
+int jecConfigParser::GetCentBinFromHiBin(const unsigned int cent)
 {
-  if(cent > 200){
-    std::cout << "Hibin given, \'" << cent << "\', is not in allowed range 0-100% (0-200). Return 0"  << std::endl;
-    return 0;
-  }
-  
-  unsigned int centPos = 0;
+  if(!isPbPb) return 0;
 
-  if(isPbPb){
-    for(int centIter = 0; centIter < nCentBins; centIter++){
-      if(cent/2 >= centBins[centIter] && cent/2 < centBins[centIter+1]){
-	centPos = centIter;
-	break;
-      }
+  if(cent/2. < centBins.at(0) || cent/2. >= centBins.at(nCentBins)) return -1;
+  
+  int centPos = 0;
+
+  for(int centIter = 0; centIter < nCentBins; centIter++){
+    if(cent/2 >= centBins[centIter] && cent/2 < centBins[centIter+1]){
+      centPos = centIter;
+      break;
     }
   }
 
