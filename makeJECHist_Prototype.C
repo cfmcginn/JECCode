@@ -139,7 +139,9 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 
   if(f1_p->GetProb() > .01) return;
 
-  for(Int_t fitIter = 0; fitIter < 1; fitIter++){
+  return;
+
+  for(Int_t fitIter = 0; fitIter < 3; fitIter++){
     Float_t max = -1;
     Int_t maxBin = -1;
 
@@ -179,6 +181,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
       
       //  if(TMath::Abs(mean - 1.0) < 0.01) return;
       if(f1_p->GetProb() > .01) return;
+      //      return;
     }
     nBins = 1;
     
@@ -198,8 +201,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 	break;
       }
     }
-    
-    
+        
     if(nBins >= 7){
       hist_p->Fit("f1_p", fitOpt.c_str(), "", fitLow, fitHi);
       
@@ -323,6 +325,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
   const Float_t jtPtHi = config.GetJtPtHi();
   Double_t jtPtBins[nJtPtBins+1];
   if(config.GetDoJtPtLogBins()) getLogBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
+  else if(config.GetDoJtPtCustomBins()) config.FillJtPtCustomBins(jtPtBins);
   else getLinBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
 
   const Int_t nJtPtEtaBins = config.GetJtPtEtaBins();
@@ -709,7 +712,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       Float_t tempSubleadingElePhi_ = -999;
       Float_t tempSubleadingEleEta_ = -999;
 
-      Float_t tempZPhi_ = -999;
+      //      Float_t tempZPhi_ = -999;
 
       if(config.GetIsGammaJet()){	
 	const Int_t nGenPart = mcPt_p->size();
@@ -808,7 +811,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	  if(z.Pt() < 20) continue;
 
-	  tempZPhi_ = z.Phi();
+	  //	  tempZPhi_ = z.Phi();
 	}
 	else if(isGoodEle){
 	  TLorentzVector ele1, ele2;
@@ -819,7 +822,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	  if(z.Pt() < 20) continue;
 
-	  tempZPhi_ = z.Phi();
+	  //	  tempZPhi_ = z.Phi();
 	}
       }
 
@@ -840,14 +843,14 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	}
       }
             
-      
+
       if(config.GetIsPbPb()){
 	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
 	  for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
 	    jtPt_[algoIter][jtIter] *= getPtEtaJetResidualCorr(jtPt_[algoIter][jtIter], jtEta_[algoIter][jtIter], hiBin_/2.);
 	  }
 	}
-      }
+      }     
       else{
 	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
           for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
@@ -855,7 +858,27 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
           }
         }
       }
-      
+      /*
+      else{
+	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+          for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
+	    //	  jtPt_[algoIter][jtIter] *= .99;
+	    if(TMath::Abs(jtEta_[algoIter][jtIter]) < .55){
+	      Float_t evalPt = jtPt_[algoIter][jtIter]/TMath::Sqrt(1.09687 - 11.3084/(jtPt_[algoIter][jtIter]) + 348.075/(jtPt_[algoIter][jtIter]*jtPt_[algoIter][jtIter]));
+	      jtPt_[algoIter][jtIter] /= TMath::Sqrt(1.09687 - 11.3084/(evalPt) + 348.075/(evalPt*evalPt));
+	    }
+	    else if(TMath::Abs(jtEta_[algoIter][jtIter]) < 1.10){
+	      Float_t evalPt = jtPt_[algoIter][jtIter]/TMath::Sqrt(1.09655 - 11.821/(jtPt_[algoIter][jtIter]) + 423.562/(jtPt_[algoIter][jtIter]*jtPt_[algoIter][jtIter]));
+	      jtPt_[algoIter][jtIter] /= TMath::Sqrt(1.09655 - 11.821/(evalPt) + 423.562/(evalPt*evalPt));
+	    }
+	    else if(TMath::Abs(jtEta_[algoIter][jtIter]) < 1.6){
+	      Float_t evalPt = jtPt_[algoIter][jtIter]/TMath::Sqrt(1.07894 - 7.98974/(jtPt_[algoIter][jtIter]) + 364.889/(jtPt_[algoIter][jtIter]*jtPt_[algoIter][jtIter]));
+	      jtPt_[algoIter][jtIter] /= TMath::Sqrt(1.07894 - 7.98974/(evalPt) + 364.889/(evalPt*evalPt));
+	    }
+          }
+        }
+      }
+      */
 
       Double_t ptHatWeight = config.GetPtHatWeight(ptHat_[0]);
 
@@ -927,7 +950,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	      if(getDR(tempSubleadingEleEta_, tempSubleadingElePhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
 	    }
 
-	    if(TMath::Abs(getDPHI(tempZPhi_, refPhi_[algoIter][jtIter])) < 7.*TMath::Pi()/8.) continue;
+	    //	    if(TMath::Abs(getDPHI(tempZPhi_, refPhi_[algoIter][jtIter])) < 7.*TMath::Pi()/8.) continue;
 	  }
 	
        
@@ -1269,24 +1292,6 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
   outFile_p->cd();
 
-  TF1* csn_p = new TF1("csn_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
-  csn_p->FixParameter(0, 0.061);
-  csn_p->FixParameter(1, 1.24);
-  csn_p->FixParameter(2, 8.08);
-
-
-  TF1* csn2_p = new TF1("csn2_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
-  csn2_p->FixParameter(0, 0.061 - .001);
-  csn2_p->FixParameter(1, 1.24 - .04);
-  csn2_p->FixParameter(2, 8.08 - .15);
-
-
-  TF1* csn3_p = new TF1("csn3_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
-  csn3_p->FixParameter(0, 0.061 + .001);
-  csn3_p->FixParameter(1, 1.24 + .04);
-  csn3_p->FixParameter(2, 8.08 + .15);
-
-
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     TDirectory* dir_p = outFile_p->GetDirectory(Form("%s", jetAlgo.at(iter).c_str()));
     if(dir_p){
@@ -1323,12 +1328,13 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	    jtDPhiVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 
+	    /*
 	    if(mIter == 1 && qgIter == 0 && centIter == 0 && jtPtEtaIter == 0){
 	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn_p", "Q", "", 30, 150);
 	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn2_p", "Q", "", 30, 150);
 	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Fit("csn3_p", "Q", "", 30, 150);
 	    }
-
+	    */
 	    jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	    jtDPhiVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	  }
@@ -1363,10 +1369,11 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
     }
   }
 
-
+  /*
   delete csn_p;
   delete csn2_p;
   delete csn3_p;
+  */
 
   if(debugMode) std::cout << __LINE__ << std::endl;
   
