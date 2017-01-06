@@ -1,0 +1,46 @@
+#Valid types are DIJET, GAMMAJET, ZJET
+EVENTTYPE=ZJET
+OUTNAME=outFile_ZJet_PYQUEN
+
+NPTHAT = 1
+PTHAT = 0
+
+INPUT= 0,/mnt/hadoop/cms/store/user/rbi/merged/PyquenFW_Z30mumuJet-HINppWinter16DR-75X_mcRun2_forest_v1/0.root,/mnt/hadoop/cms/store/user/rbi/merged/PyquenFW_Z30eeJet-HINppWinter16DR-75X_mcRun2_forest_v1/0.root
+
+ISPBPB = FALSE
+
+#Jet type filter: will and strings separated by *, ! will exclude, EX: ak*4*!Calo will grab all ak R= 0.4 jets# that are non-Calo
+JETTYPES=ak3*PF
+
+#Parameters governing x-axis range + ptbinning
+NJTPTBINS = 18
+JTPTMIN = 20
+JTPTMAX = 200.
+DOJTPTLOGBINS = FALSE
+DOJTPTCUSTOMBINS = TRUE
+JTPTCUSTOMBINS = 20,22.5,25,27.5,30,35,40,45,50,60,70,80,90,100,115,130,150,170,200
+
+NJTETABINS = 16
+JTETAMIN = -1.6
+JTETAMAX = 1.6
+DOJTETACUSTOMBINS = FALSE
+JTETACUSTOMBINS = -1.6,-1.2,-1.0,-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8,1.0,1.2,1.6
+
+NJTETAPTBINS = 3
+JTETAPTMIN = 30
+JTETAPTMAX = JTPTMAX
+
+NJTPTETABINS = 3
+
+#Parameters governing how pthats fit together
+DOWEIGHTS = FALSE
+DOPTHATSTAGGER = TRUE
+STAGGEROFFSET = 0.
+
+#Centrality binning
+NCENTBINS = 1
+CENTBINS = 30, 0
+
+#GAMMAJET specific cuts
+MINGAMMAPT=35
+GAMMAPTHATSTAGGER=0

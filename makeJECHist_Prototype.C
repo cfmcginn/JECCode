@@ -321,22 +321,23 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
   //pthat30  
   const Int_t nJtPtBins = config.GetNJtPtBins();
-  const Float_t jtPtLow = config.GetJtPtLow();
-  const Float_t jtPtHi = config.GetJtPtHi();
+  const Float_t jtPtMin = config.GetJtPtMin();
+  const Float_t jtPtMax = config.GetJtPtMax();
   Double_t jtPtBins[nJtPtBins+1];
-  if(config.GetDoJtPtLogBins()) getLogBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
+  if(config.GetDoJtPtLogBins()) getLogBins(jtPtMin, jtPtMax, nJtPtBins, jtPtBins);
   else if(config.GetDoJtPtCustomBins()) config.FillJtPtCustomBins(jtPtBins);
-  else getLinBins(jtPtLow, jtPtHi, nJtPtBins, jtPtBins);
+  else getLinBins(jtPtMin, jtPtMax, nJtPtBins, jtPtBins);
 
-  const Int_t nJtPtEtaBins = config.GetJtPtEtaBins();
+  const Int_t nJtPtEtaBins = config.GetNJtPtEtaBins();
   Double_t jtPtEtaBins[nJtPtEtaBins+1];
   getLinBins(0, config.GetJtEtaMax(), nJtPtEtaBins, jtPtEtaBins);
 
-  const Int_t nJtEtaBins = config.GetJtEtaBins();
-  const Float_t jtEtaLow = -(config.GetJtEtaMax());
-  const Float_t jtEtaHi = config.GetJtEtaMax();
+  const Int_t nJtEtaBins = config.GetNJtEtaBins();
+  const Float_t jtEtaMin = config.GetJtEtaMin();
+  const Float_t jtEtaMax = config.GetJtEtaMax();
   Double_t jtEtaBins[nJtEtaBins+1];
-  getLinBins(jtEtaLow, jtEtaHi, nJtEtaBins, jtEtaBins);
+  if(config.GetDoJtEtaCustomBins()) config.FillJtEtaCustomBins(jtEtaBins);
+  else getLinBins(jtEtaMin, jtEtaMax, nJtEtaBins, jtEtaBins);
 
   const Int_t nCentBins = config.GetNCentBins();
 
@@ -918,8 +919,8 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  if(refPt_[algoIter][jtIter] < 5.0) continue;
 	  if(refSubID_[algoIter][jtIter] != 0) continue;
 
-	  if(refPt_[algoIter][jtIter] < config.GetJtPtLow()) continue;
-	  if(refPt_[algoIter][jtIter] > config.GetJtPtHi()) continue;
+	  if(refPt_[algoIter][jtIter] < config.GetJtPtMin()) continue;
+	  if(refPt_[algoIter][jtIter] > config.GetJtPtMax()) continue;
 
 	  //	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], recoTempLeadingPhoPt) < .1) continue;
 	  
@@ -1017,7 +1018,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    }
 	  }
 	  
-	  if(refPt_[algoIter][jtIter] > config.GetJtEtaPtThresh()){
+	  if(refPt_[algoIter][jtIter] > config.GetJtEtaPtMin()){
 	    for(Int_t qgIter = 0; qgIter < 2; qgIter++){
 	      if(qgPos[qgIter] == -1) continue;
 	      
@@ -1039,7 +1040,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  
 	  genJtPtPerPthat_p[algoIter][centPos][0][pthatIter]->Fill(genJtPt_[algoIter][jtIter]);
 
-	  if(genJtPt_[algoIter][jtIter] < jtPtLow || genJtPt_[algoIter][jtIter] > jtPtHi) continue;
+	  if(genJtPt_[algoIter][jtIter] < jtPtMin || genJtPt_[algoIter][jtIter] > jtPtMax) continue;
 
 	  if(config.GetIsZJet()){
 	    if(tempLeadingMuPt_ > 10){

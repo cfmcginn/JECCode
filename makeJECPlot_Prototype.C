@@ -408,7 +408,12 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetMarkerSize(2);
 	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetMarkerStyle(20);
 
-	  if(histIter == 0) th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->DrawCopy("E1 P");
+	  
+
+	  if(histIter == 0){
+	    th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->GetXaxis()->SetRange(1, th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->GetNbinsX());
+	    th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->DrawCopy("E1 P");
+	  }
 	  else th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->DrawCopy("SAME E1 P");
 	}
 
@@ -428,7 +433,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
     if(ptEtaStr[ptEtaNum].find("VPt") != std::string::npos){
       for(Int_t iter = 0; iter < nXPanel; iter++){
-	th1Canv_p[dirIter]->SetColumnLogX(iter); 
+       	th1Canv_p[dirIter]->SetColumnLogX(iter); 
       }
     }
     
@@ -548,7 +553,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     if(addResCorrStr) resCorrStr = "_RESCORR";
 
     th1Canv_p[iter]->canv_p->Write(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), TObject::kOverwrite);
-    claverCanvasSaving(th1Canv_p[iter]->canv_p, Form("pdfDir/%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), "pdf");
+    claverCanvasSaving(th1Canv_p[iter]->canv_p, Form("pdfDir/%s_%s%s%sc_%s", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), config.GetConfigFileNameNoExt().c_str()), "pdf");
   }
 
   outFile_p->Close();
@@ -815,7 +820,7 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
       std::string centStr = centStrings[centIter];
       if(!isPbPb) centStr = "PP";
 
-      th1Canv_p[iter][centIter] = new TCanvas(Form("%s_%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str()), Form("%s_%s_MeanPts%s%s%s_c", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str()), xBins*300, yBins*325);
+      th1Canv_p[iter][centIter] = new TCanvas(Form("%s_%s_MeanPts%s%s%s_c_%s", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str(), config.GetConfigFileNameNoExt().c_str()), Form("%s_%s_MeanPts%s%s%s_c_%s", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str(), centStr.c_str(), config.GetConfigFileNameNoExt().c_str()), xBins*300, yBins*325);
       //      th1Canv_p[iter][centIter]->Divide(xBins, yBins, 0.0, 0.0);
       th1Canv_p[iter][centIter]->Divide(xBins, yBins, .000005, .000005);
     }
