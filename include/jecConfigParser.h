@@ -12,6 +12,7 @@
 #include "TNamed.h"
 #include "TDirectory.h"
 #include "TFile.h"
+#include "TMath.h"
 
 //include headers
 #include "include/doGlobalDebug.h"
@@ -39,7 +40,7 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 39;
+  const static unsigned int nValidConfigVals = 61;
   enum configIter {EVENTTYPE, //0
 		   OUTNAME, //1
 		   NPTHAT, //2
@@ -70,15 +71,37 @@ class jecConfigParser{
 		   DOJTPTETAABS, //27
 		   DOJTPTETACUSTOMBINS, //28
 		   JTPTETACUSTOMBINS, //29
-		   DOWEIGHTS, //30
-		   DOWEIGHTTRUNC, //31
-		   PTHATWEIGHTS, //32
-		   DOPTHATSTAGGER, //33
-		   STAGGEROFFSET, //34
-		   NCENTBINS, //35
-		   CENTBINS, //36
-		   MINGAMMAPT, //37
-		   GAMMAPTHATSTAGGER}; //38
+		   FITACCEPTPROBABILITY, //30
+		   DOITERATIVEFIT, //31
+		   FITITERATIONS, //32
+		   FITITERATIONINTERVAL, //33
+		   DOWEIGHTS, //34
+		   DOWEIGHTTRUNC, //35
+		   PTHATWEIGHTS, //36
+		   DOPTHATSTAGGER, //37
+		   STAGGEROFFSET, //38
+		   NCENTBINS, //39
+		   CENTBINS, //40
+		   MINGAMMAPT, //41
+		   MAXGAMMAPT, //42
+		   MINGAMMAETA, //43
+		   MAXGAMMAETA, //44
+		   GAMMAPTHATSTAGGER, //45
+		   DOGAMMAJTDPHICUT, // 46
+		   GAMMAJTDPHICUT, //47
+		   MINLEPTONPT, //48
+		   MINLEPTONETA, //49
+		   MAXLEPTONETA, //50
+		   DOLEPTONFLAVORCUTS, //51
+		   MINELECTRONPT, //52
+		   MINELECTRONETA, //53
+		   MAXELECTRONETA, //54
+		   MINMUONPT, //55
+		   MINMUONETA, //56
+		   MAXMUONETA, //57
+		   MINZPT, //58
+		   DOZJTDPHICUT, //59
+		   ZJTDPHICUT}; //60
  
   const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
 							 "OUTNAME", //1
@@ -110,15 +133,37 @@ class jecConfigParser{
 							 "DOJTPTETAABS", //27
 							 "DOJTPTETACUSTOMBINS", //28
 							 "JTPTETACUSTOMBINS", //29
-							 "DOWEIGHTS", //30
-							 "DOWEIGHTTRUNC", //31
-							 "PTHATWEIGHTS", //32
-							 "DOPTHATSTAGGER", //33
-							 "STAGGEROFFSET", //34
-							 "NCENTBINS", //35
-							 "CENTBINS", //36
-							 "MINGAMMAPT", //37
-							 "GAMMAPTHATSTAGGER"}; //38
+							 "FITACCEPTPROBABILITY", //30
+							 "DOITERATIVEFIT", //31
+							 "FITITERATIONS", //32
+							 "FITITERATIONINTERVAL", //33
+							 "DOWEIGHTS", //34
+							 "DOWEIGHTTRUNC", //35
+							 "PTHATWEIGHTS", //36
+							 "DOPTHATSTAGGER", //37
+							 "STAGGEROFFSET", //38
+							 "NCENTBINS", //39
+							 "CENTBINS", //40
+							 "MINGAMMAPT", //41
+							 "MAXGAMMAPT", //42
+							 "MINGAMMAETA", //43
+							 "MAXGAMMAETA", //44
+							 "GAMMAPTHATSTAGGER", //45
+							 "DOGAMMAJTDPHICUT", //46
+							 "GAMMAJTDPHICUT", //47
+							 "MINLEPTONPT", //48
+							 "MINLEPTONETA", //49
+							 "MAXLEPTONETA", //50
+							 "DOLEPTONFLAVORCUTS", //51
+							 "MINELECTRONPT", //52
+							 "MINELECTRONETA", //53
+							 "MAXELECTRONETA", //54
+							 "MINMUONPT", //55
+							 "MINMUONETA", //56
+							 "MAXMUONETA", //57
+							 "MINZPT", //58
+							 "DOZJTDPHICUT", //59
+							 "ZJTDPHICUT"}; //60
 
 
   const std::string configTypes[nValidConfigVals] = {"std::string", //0
@@ -151,16 +196,37 @@ class jecConfigParser{
 						     "bool", //27
 						     "bool", //28
 						     "std::vector<float>", //29
-						     "bool", //30
+						     "unsigned float", //30
 						     "bool", //31
-						     "std::vector<float>", //32
-						     "bool", //33
-						     "unsigned float", //34
-						     "unsgined int", //35
-						     "std::vector<unsigned int>", //36
-						     "unsigned float", //37
-						     "unsigned float"}; //38
-  
+						     "unsigned int", //32
+						     "unsigned float", //33
+						     "bool", //34
+						     "bool", //35
+						     "std::vector<float>", //36
+						     "bool", //37
+						     "unsigned float", //38
+						     "unsgined int", //39
+						     "std::vector<unsigned int>", //40
+						     "unsigned float", //41
+						     "unsigned float", //42
+						     "float", //43
+						     "float", //44
+						     "unsigned float", //45
+						     "bool", //46
+						     "unsigned float", //47
+						     "unsigned float", //48
+						     "float", //49
+						     "float", //50
+						     "bool", //51
+						     "unsigned float", //52
+						     "float", //53
+						     "float", //54
+						     "unsigned float", //55
+						     "float", //56
+						     "float", //57
+						     "unsigned float", //58
+						     "bool", //59
+						     "unsigned float"}; //60
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
 							     "", //1
@@ -192,15 +258,37 @@ class jecConfigParser{
 							     "TRUE", //27
 							     "FALSE", //28
 							     "", //29
-							     "FALSE", //30
-							     "FALSE", //31
-							     "", //32
-							     "TRUE", //33
-							     "20", //34
-							     "2", //35
-							     "100,30,0", //36
-							     "40.", //37
-							     "0."}; //38
+							     "0.05", //30
+							     "TRUE", //31
+							     "3", //32
+							     "0.05", //33
+							     "FALSE", //34
+							     "FALSE", //35
+							     "", //36
+							     "TRUE", //37
+							     "20", //38
+							     "2", //39
+							     "100,30,0", //40
+							     "40.", //41
+							     "10000.", //42
+							     "-1.44", //43
+							     "1.44", //44
+							     "0.", //45
+							     "FALSE", //46
+							     "7./8.*PI", //47
+							     "15", //48
+							     "-1.44", //49
+							     "1.44", //50
+							     "FALSE", //51
+							     "15", //52
+							     "-1.44", //53
+							     "1.44", //54
+							     "10", //55
+							     "-2.5", //56
+							     "2.5", //57
+							     "20", //58
+							     "FALSE", //59
+							     "7./8.*PI"}; //60
 
   unsigned int nConfigInputs[nValidConfigVals] = {0, //0
 						  0, //1
@@ -240,7 +328,29 @@ class jecConfigParser{
 						  0, //35
 						  0, //36
 						  0, //37
-						  0}; //38
+						  0, //38
+						  0, //39
+						  0, //40
+						  0, //41
+						  0, //42
+						  0, //43
+						  0, //44
+						  0, //45
+						  0, //46
+						  0, //47
+						  0, //48
+						  0, //49
+						  0, //50
+						  0, //51
+						  0, //52
+						  0, //53
+						  0, //54
+						  0, //55
+						  0, //56
+						  0, //57
+						  0, //58
+						  0, //59
+						  0}; //60
   
 
   std::string configInputs[nValidConfigVals] = {"", //0
@@ -281,8 +391,29 @@ class jecConfigParser{
 						"", //35
 						"", //36
 						"", //37
-						""}; //38
-
+						"", //38
+						"", //39
+						"", //40
+						"", //41
+						"", //42
+						"", //43
+						"", //44
+						"", //45
+						"", //46
+						"", //47
+						"", //48
+						"", //49
+						"", //50
+						"", //51
+						"", //52
+						"", //53
+						"", //54
+						"", //55
+						"", //56
+						"", //57
+						"", //58
+						"", //59
+						""}; //60
 
   std::string configFileName = "";
   std::string eventTypeStr = "";
@@ -330,6 +461,11 @@ class jecConfigParser{
   bool doJtPtEtaCustomBins = true;
   std::vector<float> jtPtEtaCustomBins;
 
+  float fitAcceptProbability = 0.05;
+  bool doIterativeFit = true;
+  unsigned int fitIterations = 3;
+  float fitIterationInterval= 0.05;
+
   bool doWeights = false;
   bool doWeightTrunc = false;
   std::vector<double> pthatWeights;
@@ -340,7 +476,31 @@ class jecConfigParser{
   std::vector<unsigned int> centBins = {100, 30, 0};
 
   float minGammaPt = 40.;
+  float maxGammaPt = 10000.;
+  float minGammaEta = -1.44;
+  float maxGammaEta = 1.44;
   float gammaPtHatStagger = 0.;
+
+  bool doGammaJtDPhiCut = false;
+  float gammaJtDPhiCut = 7.*TMath::Pi()/8.;
+
+  float minLeptonPt = 15.;
+  float minLeptonEta = -1.44;
+  float maxLeptonEta = 1.44;
+
+  bool doLeptonFlavorCuts = false;
+
+  float minElectronPt = 15.;
+  float minElectronEta = -1.44;
+  float maxElectronEta = 1.44;
+
+  float minMuonPt = 10.;
+  float minMuonEta = -2.5;
+  float maxMuonEta = 2.5;
+
+  float minZPt = 40.;
+  bool doZJtDPhiCut = false;
+  float zJtDPhiCut = 7.*TMath::Pi()/8.;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -411,10 +571,17 @@ class jecConfigParser{
   void FillJtPtEtaCustomBins(Float_t jtPtEtaBinArr[]);
   void FillJtPtEtaCustomBins(Double_t jtPtEtaBinArr[]);
   int GetJtPtEtaBinPos(const float);
+  float GetFitAcceptProbability();
+  bool GetDoIterativeFit();
+  unsigned int GetFitIterations();
+  float GetFitIterationInterval();
   bool GetDoWeights();
   bool GetDoWeightTrunc();
   bool GetDoPthatStagger();
-  float GetJtWeight(const unsigned int, const float, const float, const float);
+  bool KeepEventGamma(const float, const float);
+  bool KeepEventLeptons(const float, const float, const float, const float, const int);
+  bool KeepEventZ(const float);
+  float GetJtWeight(const unsigned int, const float, const float);
   double GetPtHatWeight(const float);
   double GetTruncPtHatWeight(const float, const float);
   unsigned int GetNCentBins();
@@ -424,7 +591,26 @@ class jecConfigParser{
   int GetCentBinFromHiBin(const unsigned int);
   void PrintCentBins();
   float GetMinGammaPt();
+  float GetMaxGammaPt();
+  float GetMinGammaEta();
+  float GetMaxGammaEta();
   float GetGammaPtHatStagger();
+  bool GetDoGammaJtDPhiCut();
+  float GetGammaJtDPhiCut();
+  float GetMinLeptonPt();
+  float GetMinLeptonEta();
+  float GetMaxLeptonEta();
+  bool GetDoLeptonFlavorCuts();
+  float GetMinElectronPt();
+  float GetMinElectronEta();
+  float GetMaxElectronEta();
+  float GetMinMuonPt();
+  float GetMinMuonEta();
+  float GetMaxMuonEta();
+  float GetMinZPt();
+  bool GetDoZJtDPhiCut();
+  float GetZJtDPhiCut();
+
 
   void WriteConfigParamsToRootFile(TFile*);
 };
@@ -529,14 +715,54 @@ bool jecConfigParser::ProcessUInt(std::string intString, unsigned int& returnInt
 
 bool jecConfigParser::ProcessUFloat(std::string floatString, float& returnFloat, jecConfigParser::configIter enumVal)
 {
-  if(!StringIsGoodUFloat(floatString)){
-    std::cout << validConfigVals[enumVal] << " value \'" << floatString << "\' is invalid. Setting to default." << std::endl;
-    returnFloat = std::stof(defaultConfigInputs[enumVal]);
-    return false;
+  std::string originalFloatString = floatString;
+  bool doPiMult = false;
+  if(floatString.find("*PI") != std::string::npos){
+    floatString.replace(floatString.find("*PI"), 3, "");
+    doPiMult = true;
+  }
+
+  std::vector<std::string> floatStrings;
+  std::vector<std::string> divOrMult;
+  int splitIter = 0;
+
+  while(splitIter < (int)floatString.size()){
+    if(floatString.substr(splitIter, 1).find("/") != std::string::npos){
+      floatStrings.push_back(floatString.substr(0, splitIter));
+      divOrMult.push_back("DIV");
+      splitIter = 0;
+      floatString.replace(0, floatString.find("/")+1, "");
+    }
+    else if(floatString.substr(splitIter, 1).find("*") != std::string::npos){
+      floatStrings.push_back(floatString.substr(0, splitIter));
+      divOrMult.push_back("MULT");
+      splitIter = 0;
+      floatString.replace(0, floatString.find("*")+1, "");
+    }
+    else splitIter++;
+  }
+  if(floatString.size() != 0) floatStrings.push_back(floatString);
+
+
+  for(int iter = 0; iter < (int)floatStrings.size(); iter++){
+    if(!StringIsGoodUFloat(floatStrings.at(iter))){
+      std::cout << validConfigVals[enumVal] << " value \'" << originalFloatString << "\', specifically \'" << floatStrings.at(iter) << "\', is invalid. Setting to default." << std::endl;
+      returnFloat = std::stof(defaultConfigInputs[enumVal]);
+      return false;
+    }
   }
   // setting                                                                                                                    
-  configInputs[enumVal] = floatString;
-  returnFloat = std::stof(floatString);
+  configInputs[enumVal] = originalFloatString;
+  returnFloat = std::stof(floatStrings.at(0));
+  
+  if(floatStrings.size() > 1){
+    for(int iter = 1; iter < (int)floatStrings.size(); iter++){
+      if(divOrMult.at(iter-1).find("MULT") != std::string::npos) returnFloat *= std::stof(floatStrings.at(iter));
+      else if(divOrMult.at(iter-1).find("DIV") != std::string::npos) returnFloat /= std::stof(floatStrings.at(iter));
+    }
+  }
+
+  if(doPiMult) returnFloat *= TMath::Pi();
   nConfigInputs[enumVal]++;
 
   return true;
@@ -544,14 +770,53 @@ bool jecConfigParser::ProcessUFloat(std::string floatString, float& returnFloat,
 
 bool jecConfigParser::ProcessFloat(std::string floatString, float& returnFloat, jecConfigParser::configIter enumVal)
 {
-  if(!StringIsGoodFloat(floatString)){
-    std::cout << validConfigVals[enumVal] << " value \'" << floatString << "\' is invalid. Setting to default." << std::endl;
-    returnFloat = std::stof(defaultConfigInputs[enumVal]);
-    return false;
+  std::string originalFloatString = floatString;
+  bool doPiMult = false;
+  if(floatString.find("*PI") != std::string::npos){
+    floatString.replace(floatString.find("*PI"), 3, "");
+    doPiMult = true;
+  }  
+
+  std::vector<std::string> floatStrings;
+  std::vector<std::string> divOrMult;
+  int splitIter = 0;
+
+  while(splitIter < (int)floatString.size()){
+    if(floatString.substr(splitIter, 1).find("/") != std::string::npos){
+      floatStrings.push_back(floatString.substr(0, splitIter));
+      divOrMult.push_back("DIV");
+      splitIter = 0;
+      floatString.replace(0, floatString.find("/")+1, "");
+    }
+    else if(floatString.substr(splitIter, 1).find("*") != std::string::npos){
+      floatStrings.push_back(floatString.substr(0, splitIter));
+      divOrMult.push_back("MULT");
+      splitIter = 0;
+      floatString.replace(0, floatString.find("*")+1, "");
+    }
+    else splitIter++;
+  }
+  if(floatString.size() != 0) floatStrings.push_back(floatString);
+
+  for(int iter = 0; iter < (int)floatStrings.size(); iter++){
+    if(!StringIsGoodFloat(floatStrings.at(iter))){
+      std::cout << validConfigVals[enumVal] << " value \'" << originalFloatString << "\', specifically \'" << floatStrings.at(iter) << "\', is invalid. Setting to default." << std::endl;
+      returnFloat = std::stof(defaultConfigInputs[enumVal]);
+      return false;
+    }
   }
   // setting                                                                                                                    
-  configInputs[enumVal] = floatString;
-  returnFloat = std::stof(floatString);
+  configInputs[enumVal] = originalFloatString;
+  returnFloat = std::stof(floatStrings.at(0));
+  
+  if(floatStrings.size() > 1){
+    for(int iter = 1; iter < (int)floatStrings.size(); iter++){
+      if(divOrMult.at(iter-1).find("MULT") != std::string::npos) returnFloat *= std::stof(floatStrings.at(iter));
+      else if(divOrMult.at(iter-1).find("DIV") != std::string::npos) returnFloat /= std::stof(floatStrings.at(iter));
+    }
+  }
+
+  if(doPiMult) returnFloat *= TMath::Pi();
   nConfigInputs[enumVal]++;
 
   return true;
@@ -1109,11 +1374,11 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(tempStr.substr(0, validConfigVals[DOJTPTETAABS].size()).find(validConfigVals[DOJTPTETAABS]) != std::string::npos){
-	if(!ProcessBool(valStr, doJtPtEtaAbs, DOJTPTETAABS)){
-	  doJtPtEtaAbs = false;
-	  continue;
-	}
+      if(!ProcessBool(valStr, doJtPtEtaAbs, DOJTPTETAABS)){
+	doJtPtEtaAbs = false;
+	continue;
       }
+    }
 
     if(tempStr.substr(0, validConfigVals[DOJTPTETACUSTOMBINS].size()).find(validConfigVals[DOJTPTETACUSTOMBINS]) != std::string::npos){
 	if(!ProcessBool(valStr, doJtPtEtaCustomBins, DOJTPTETACUSTOMBINS)){
@@ -1152,6 +1417,25 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       nConfigInputs[JTPTETACUSTOMBINS]++;      
     }
 
+    if(tempStr.substr(0, validConfigVals[FITACCEPTPROBABILITY].size()).find(validConfigVals[FITACCEPTPROBABILITY]) != std::string::npos){
+      if(!ProcessUFloat(valStr, fitAcceptProbability, FITACCEPTPROBABILITY)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOITERATIVEFIT].size()).find(validConfigVals[DOITERATIVEFIT]) != std::string::npos){
+      if(!ProcessBool(valStr, doIterativeFit, DOITERATIVEFIT)){
+	doIterativeFit = false;
+	continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[FITITERATIONS].size()).find(validConfigVals[FITITERATIONS]) != std::string::npos){
+      if(!ProcessUInt(valStr, fitIterations, FITITERATIONS)) continue;
+    }
+    
+    if(tempStr.substr(0, validConfigVals[FITITERATIONINTERVAL].size()).find(validConfigVals[FITITERATIONINTERVAL]) != std::string::npos){
+      if(!ProcessUFloat(valStr, fitIterationInterval, FITITERATIONINTERVAL)) continue;
+    }
+    
 
     if(tempStr.substr(0, validConfigVals[DOWEIGHTS].size()).find(validConfigVals[DOWEIGHTS]) != std::string::npos){
       if(!ProcessBool(valStr, doWeights, DOWEIGHTS)){
@@ -1259,6 +1543,87 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
     if(tempStr.substr(0, validConfigVals[MINGAMMAPT].size()).find(validConfigVals[MINGAMMAPT]) != std::string::npos){
       if(!ProcessUFloat(valStr, minGammaPt, MINGAMMAPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXGAMMAPT].size()).find(validConfigVals[MAXGAMMAPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, maxGammaPt, MAXGAMMAPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINGAMMAETA].size()).find(validConfigVals[MINGAMMAETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, minGammaEta, MINGAMMAETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXGAMMAETA].size()).find(validConfigVals[MAXGAMMAETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, maxGammaEta, MAXGAMMAETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOGAMMAJTDPHICUT].size()).find(validConfigVals[DOGAMMAJTDPHICUT]) != std::string::npos){
+      if(!ProcessBool(valStr, doGammaJtDPhiCut, DOGAMMAJTDPHICUT)){
+        doGammaJtDPhiCut = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[GAMMAJTDPHICUT].size()).find(validConfigVals[GAMMAJTDPHICUT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, gammaJtDPhiCut, GAMMAJTDPHICUT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINLEPTONPT].size()).find(validConfigVals[MINLEPTONPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, minLeptonPt, MINLEPTONPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINLEPTONETA].size()).find(validConfigVals[MINLEPTONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, minLeptonEta, MINLEPTONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXLEPTONETA].size()).find(validConfigVals[MAXLEPTONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, maxLeptonEta, MAXLEPTONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOLEPTONFLAVORCUTS].size()).find(validConfigVals[DOLEPTONFLAVORCUTS]) != std::string::npos){
+      if(!ProcessBool(valStr, doLeptonFlavorCuts, DOLEPTONFLAVORCUTS)){
+        doLeptonFlavorCuts = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINELECTRONPT].size()).find(validConfigVals[MINELECTRONPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, minElectronPt, MINELECTRONPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINELECTRONETA].size()).find(validConfigVals[MINELECTRONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, minElectronEta, MINELECTRONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXELECTRONETA].size()).find(validConfigVals[MAXELECTRONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, maxElectronEta, MAXELECTRONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINMUONPT].size()).find(validConfigVals[MINMUONPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, minMuonPt, MINMUONPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINMUONETA].size()).find(validConfigVals[MINMUONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, minMuonEta, MINMUONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXMUONETA].size()).find(validConfigVals[MAXMUONETA]) != std::string::npos){
+      if(!ProcessFloat(valStr, maxMuonEta, MAXMUONETA)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINZPT].size()).find(validConfigVals[MINZPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, minZPt, MINZPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOZJTDPHICUT].size()).find(validConfigVals[DOZJTDPHICUT]) != std::string::npos){
+      if(!ProcessBool(valStr, doZJtDPhiCut, DOZJTDPHICUT)){
+        doZJtDPhiCut = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[ZJTDPHICUT].size()).find(validConfigVals[ZJTDPHICUT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, zJtDPhiCut, ZJTDPHICUT)) continue;
     }
   }
 
@@ -1755,6 +2120,18 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
   }
   
+  if(fitAcceptProbability > 1){
+    std::cout << "FITACCEPTPROBABILITY value, \'" << fitAcceptProbability << "\' is greater than 1. Return false." << std::endl;
+    ResetConfigParser();
+    return false;
+  }
+
+  if(doIterativeFit && fitIterations*fitIterationInterval > 1){
+    std::cout << "DOITERATIVEFIT == TRUE" << std::endl;
+    std::cout << "FITITERATIONS, \'" << fitIterations << "\', times FITITERATIONINTERVAL, \'" << fitIterationInterval << "\', is greater than 1. Return false." << std::endl;
+    ResetConfigParser();
+    return false;
+  }
 
   if((doWeights && doPthatStagger) || (!doWeights && !doPthatStagger)){
     std::cout << "DOWEIGHTS, \'" << doWeights << "\', and DOPTHATSTAGGER, \'" << doPthatStagger << "\', both have same value. Please choose one. Return false." << std::endl;
@@ -1839,6 +2216,42 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
   if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 
+  if(minGammaPt >= maxGammaPt){
+    std::cout << "MINGAMMAPT, \'" << minGammaPt << "\', is greater than or equal to MAXGAMMAPT, \'" << maxGammaPt << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(minGammaEta >= maxGammaEta){
+    std::cout << "MINGAMMAETA, \'" << minGammaEta << "\', is greater than or equal to MAXGAMMAETA, \'" << maxGammaEta << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+
+  if(minLeptonEta >= maxLeptonEta){
+    std::cout << "MINLEPTONETA, \'" << minLeptonEta << "\', is greater than or equal to MAXLEPTONETA, \'" << maxLeptonEta << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(minElectronEta >= maxElectronEta){
+    std::cout << "MINELECTRONETA, \'" << minElectronEta << "\', is greater than or equal to MAXELECTRONETA, \'" << maxElectronEta << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(minMuonEta >= maxMuonEta){
+    std::cout << "MINMUONETA, \'" << minMuonEta << "\', is greater than or equal to MAXMUONETA, \'" << maxMuonEta << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
   return true;
 }
 
@@ -1883,18 +2296,40 @@ void jecConfigParser::ResetConfigParser()
   doJtPtEtaAbs = false; //27
   doJtPtEtaCustomBins = false; //28
   jtPtEtaCustomBins.clear(); //29
-  doWeights = false; //30
-  doWeightTrunc = false; //31
-  pthatWeights.clear(); //32
-  doPthatStagger = true; //33
-  staggerOffset = 20.; //34
-  nCentBins = 2; //35
-  centBins.clear(); //36
+  fitAcceptProbability = 0.05; //30
+  doIterativeFit = true; //31
+  fitIterations = 3; //32
+  fitIterationInterval = 0.05; //33
+  doWeights = false; //34
+  doWeightTrunc = false; //35
+  pthatWeights.clear(); //36
+  doPthatStagger = true; //37
+  staggerOffset = 20.; //38
+  nCentBins = 2; //39
+  centBins.clear(); //40
   centBins.push_back(100);
   centBins.push_back(30);
   centBins.push_back(0);
-  minGammaPt = 40.; //37
-  gammaPtHatStagger = 0.; //38
+  minGammaPt = 40.; //41
+  maxGammaPt = 10000.; //42
+  minGammaEta = -1.44; //43
+  maxGammaEta = 1.44; //44
+  gammaPtHatStagger = 0.; //45
+  doGammaJtDPhiCut = false; //46
+  gammaJtDPhiCut = 7.*TMath::Pi()/8.; //47
+  minLeptonPt = 15.; //48
+  minLeptonEta = -1.44; //49
+  maxLeptonEta = 1.44; //50
+  doLeptonFlavorCuts = false; //51
+  minElectronPt = 15.; //52
+  minElectronEta = -1.44; //53
+  maxElectronEta = 1.44; //54  
+  minMuonPt = 10.; //55
+  minMuonEta = -2.5; //56
+  maxMuonEta = 2.5; //57  
+  minZPt = 20.; //58                                                                           
+  doZJtDPhiCut = false; //59
+  zJtDPhiCut = 7.*TMath::Pi()/8.; //60
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -2144,6 +2579,11 @@ void jecConfigParser::FillJtPtEtaCustomBins(Double_t jtPtEtaBinArr[])
   return;
 }
 
+float jecConfigParser::GetFitAcceptProbability(){return fitAcceptProbability;}
+bool jecConfigParser::GetDoIterativeFit(){return doIterativeFit;}
+unsigned int jecConfigParser::GetFitIterations(){return fitIterations;}
+float jecConfigParser::GetFitIterationInterval(){return fitIterationInterval;}
+
 int jecConfigParser::GetJtPtEtaBinPos(const float jtEta)
 {
   int binPos = -1;
@@ -2170,14 +2610,75 @@ bool jecConfigParser::GetDoWeights(){return doWeights;}
 bool jecConfigParser::GetDoWeightTrunc(){return doWeightTrunc;}
 bool jecConfigParser::GetDoPthatStagger(){return doPthatStagger;}
 
-float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt, const float jtEta, const float bosonPt = 0.)
+bool jecConfigParser::KeepEventGamma(const float gammaPt, const float gammaEta)
+{
+  if(!isGammaJet){
+    std::cout << "Warning: jecConfigParser::KeepEventGamma called for ISGAMMAJET == FALSE. Return false." << std::endl;
+    return false;
+  }
+
+  if(gammaPt < minGammaPt) return false;
+  else if(gammaPt > maxGammaPt) return false; 
+  else if(gammaEta > maxGammaEta) return false;
+  else if(gammaEta < minGammaEta) return false;
+  else return true;
+}
+
+
+bool jecConfigParser::KeepEventLeptons(const float leptonPt1, const float leptonEta1, const float leptonPt2, const float leptonEta2, const int flavorVal)
+{
+  if(doLeptonFlavorCuts && TMath::Abs(flavorVal) != 11 && TMath::Abs(flavorVal) != 13){
+    std::cout << "Warning: jecConfigParser::KeepEventLeptons called w/ DOLEPTONFLAVORCUTS == TRUE but invalid flavorVal, \'" << flavorVal << "\'. Please use 11,-11,13,-13. Return false." << std::endl;
+    return false;
+  }
+
+  if(!isZJet){
+    std::cout << "Warning: jecConfigParser::KeepEventLeptons called for ISZJET == FALSE. Return false." << std::endl;
+    return false;
+  }
+
+  bool keepLeptons = true;
+
+  if(!doLeptonFlavorCuts){
+    if(leptonPt1 < minLeptonPt) keepLeptons = false;
+    else if(leptonEta1 < minLeptonEta || leptonEta1 > maxLeptonEta) keepLeptons = false;
+    else if(leptonPt2 < minLeptonPt) keepLeptons = false;
+    else if(leptonEta2 < minLeptonEta || leptonEta2 > maxLeptonEta) keepLeptons = false;
+  }
+  else if(TMath::Abs(flavorVal) == 11){
+    if(leptonPt1 < minElectronPt) keepLeptons = false;
+    else if(leptonEta1 < minElectronEta || leptonEta1 > maxElectronEta) keepLeptons = false;
+    else if(leptonPt2 < minElectronPt) keepLeptons = false;
+    else if(leptonEta2 < minElectronEta || leptonEta2 > maxElectronEta) keepLeptons = false;
+  }
+  else if(TMath::Abs(flavorVal) == 13){
+    if(leptonPt1 < minMuonPt) keepLeptons = false;
+    else if(leptonEta1 < minMuonEta || leptonEta1 > maxMuonEta) keepLeptons = false;
+    else if(leptonPt2 < minMuonPt) keepLeptons = false;
+    else if(leptonEta2 < minMuonEta || leptonEta2 > maxMuonEta) keepLeptons = false;
+  }
+
+  return keepLeptons;
+}
+
+bool jecConfigParser::KeepEventZ(const float zPt)
+{
+  if(!isZJet){
+    std::cout << "Warning: jecConfigParser::KeepEventZ called for ISZJET == FALSE. Return false." << std::endl;
+    return false;
+  }
+
+  if(zPt < minZPt) return false;
+  else return true;
+}
+
+
+float jecConfigParser::GetJtWeight(const unsigned int pthatPos, const float jtPt, const float jtEta)
 {
   if(jtPt < jtPtMin || jtPt > jtPtMax) return 0.;
 
   if(jtEta > jtEtaMax) return 0.;
   if(jtEta < jtEtaMin) return 0.;
-
-  if(isGammaJet && bosonPt < minGammaPt) return 0.;
 
   int truePtHatPos = -1;
   for(unsigned int iter = 0; iter < nPthats; iter++){
@@ -2396,8 +2897,29 @@ void jecConfigParser::PrintCentBins()
 
 
 float jecConfigParser::GetMinGammaPt(){return minGammaPt;}
+float jecConfigParser::GetMaxGammaPt(){return maxGammaPt;}
+float jecConfigParser::GetMinGammaEta(){return minGammaEta;}
+float jecConfigParser::GetMaxGammaEta(){return maxGammaEta;}
 float jecConfigParser::GetGammaPtHatStagger(){return gammaPtHatStagger;}
+bool jecConfigParser::GetDoGammaJtDPhiCut(){return doGammaJtDPhiCut;}
+float jecConfigParser::GetGammaJtDPhiCut(){return gammaJtDPhiCut;}
 
+float jecConfigParser::GetMinLeptonPt(){return minLeptonPt;}
+float jecConfigParser::GetMinLeptonEta(){return minLeptonEta;}
+float jecConfigParser::GetMaxLeptonEta(){return maxLeptonEta;}
+
+bool jecConfigParser::GetDoLeptonFlavorCuts(){return doLeptonFlavorCuts;}
+
+float jecConfigParser::GetMinElectronPt(){return minElectronPt;}
+float jecConfigParser::GetMinElectronEta(){return minElectronEta;}
+float jecConfigParser::GetMaxElectronEta(){return maxElectronEta;}
+float jecConfigParser::GetMinMuonPt(){return minMuonPt;}
+float jecConfigParser::GetMinMuonEta(){return minMuonEta;}
+float jecConfigParser::GetMaxMuonEta(){return maxMuonEta;}
+
+float jecConfigParser::GetMinZPt(){return minZPt;}
+bool jecConfigParser::GetDoZJtDPhiCut(){return doZJtDPhiCut;}
+float jecConfigParser::GetZJtDPhiCut(){return zJtDPhiCut;}
 
 void jecConfigParser::WriteConfigParamsToRootFile(TFile* writeFile_p)
 {

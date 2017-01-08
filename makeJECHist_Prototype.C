@@ -106,8 +106,7 @@ void genSort(Int_t nGenJt, Float_t genJtPt[], Float_t genJtPhi[], Float_t genJtE
   return;
 }
 
-
-void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr, Bool_t isWeighted = true)
+void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float_t& resErr, Bool_t isWeighted, float fitAcceptProb, bool doIterativeFit, unsigned int fitIterations, float fitIterationInterval)
 {
   if(hist_p->Integral() == 0) return;
   if(hist_p->GetEntries() == 0) return;
@@ -125,7 +124,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
   meanErr = f1_p->GetParError(1);
   resErr = f1_p->GetParError(2);
 
-  if(f1_p->GetProb() > .01) return;
+  if(f1_p->GetProb() > fitAcceptProb) return;
 
   hist_p->Rebin(2);
 
@@ -137,11 +136,11 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
   meanErr = f1_p->GetParError(1);
   resErr = f1_p->GetParError(2);
 
-  if(f1_p->GetProb() > .01) return;
+  if(f1_p->GetProb() > fitAcceptProb) return;
 
-  return;
+  if(!doIterativeFit) return;
 
-  for(Int_t fitIter = 0; fitIter < 3; fitIter++){
+  for(unsigned int fitIter = 0; fitIter < fitIterations; fitIter++){
     Float_t max = -1;
     Int_t maxBin = -1;
 
@@ -163,7 +162,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
       
       nBins += 2;
       
-      if(hist_p->Integral(tempBin, maxBin+iter) > (.95-.05*fitIter)*hist_p->Integral() || tempBin == 1){
+      if(hist_p->Integral(tempBin, maxBin+iter) > (1. - fitIterationInterval*(fitIter+1))*hist_p->Integral() || tempBin == 1){
 	fitLow = hist_p->GetBinCenter(tempBin);
 	fitHi = hist_p->GetBinCenter(maxBin+iter);
 	break;
@@ -178,24 +177,22 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
       
       meanErr = f1_p->GetParError(1);
       resErr = f1_p->GetParError(2);
-      
-      //  if(TMath::Abs(mean - 1.0) < 0.01) return;
-      if(f1_p->GetProb() > .01) return;
-      //      return;
+
+      if(f1_p->GetProb() > fitAcceptProb) return;
     }
     nBins = 1;
     
     Int_t meanBin = hist_p->FindBin(hist_p->GetMean());
     fitLow = -1;
     fitHi = -1;
-  
+    
     for(Int_t iter = 1; iter < hist_p->GetNbinsX(); iter++){
       Int_t tempBin = meanBin - iter;
       if(tempBin < 1) tempBin = 1;
       
       nBins += 2;
       
-      if(hist_p->Integral(tempBin, meanBin+iter) > (.95-.05*fitIter)*hist_p->Integral() || tempBin == 1){
+      if(hist_p->Integral(tempBin, meanBin+iter) > (1. - fitIterationInterval*(fitIter+1))*hist_p->Integral() || tempBin == 1){
 	fitLow = hist_p->GetBinCenter(tempBin);
 	fitHi = hist_p->GetBinCenter(meanBin+iter);
 	break;
@@ -210,10 +207,18 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
       
       meanErr = f1_p->GetParError(1);
       resErr = f1_p->GetParError(2);
+
+      if(f1_p->GetProb() > fitAcceptProb) return;
     }
   }
 
-  delete f1_p;
+  hist_p->Fit("f1_p", fitOpt.c_str());
+
+  mean = f1_p->GetParameter(1);
+  res = f1_p->GetParameter(2);
+
+  meanErr = f1_p->GetParError(1);
+  resErr = f1_p->GetParError(2);
 
   return;
 }
@@ -429,6 +434,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
   TH1F* jtRecoOverGenVPt_Mean_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nMeanFit];
   TH1F* jtRecoOverGenVPt_Res_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVPt_ResOverMean_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nMeanFit];
   TH1F* jtRecoOverGenVPt_MeanResPts_p[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nJtPtBins];
   Int_t jtRecoOverGenVPt_MeanResPts_COUNTS[nJetAlgo][nCentBins][nJtPtEtaBins+1][nQG][nJtPtBins];
 
@@ -447,6 +453,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
   TH1F* jtRecoOverGenVEta_Mean_p[nJetAlgo][nCentBins][nJtEtaPtBins+1][nQG][nMeanFit];
   TH1F* jtRecoOverGenVEta_Res_p[nJetAlgo][nCentBins][nJtEtaPtBins+1][nQG][nMeanFit];
+  TH1F* jtRecoOverGenVEta_ResOverMean_p[nJetAlgo][nCentBins][nJtEtaPtBins+1][nQG][nMeanFit];
   TH1F* jtRecoOverGenVEta_MeanResPts_p[nJetAlgo][nCentBins][nJtEtaPtBins+1][nQG][nJtEtaBins];
   Int_t jtRecoOverGenVEta_MeanResPts_COUNTS[nJetAlgo][nCentBins][nJtEtaPtBins+1][nQG][nJtEtaBins];
 
@@ -484,10 +491,11 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	    jtRecoOverGenVPt_Res_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_%sRes_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
+	    jtRecoOverGenVPt_ResOverMean_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_%sResOverMean_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#frac{#sigma_{Reco./Gen.}}{#mu_{Reco./Gen.}} (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
+
 	    jtDPhiVPt_Mean_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtDPhiVPt_%s_%s_%sMean_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#Delta#phi (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
 
 	    jtDPhiVPt_Res_p[iter][centIter][ptEtaIter][qgIter][mIter] = new TH1F(Form("jtDPhiVPt_%s_%s_%sRes_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T};#Delta#phi (%s)", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins);
-	 
 	  }
 	 
 	  for(Int_t jtIter = 0; jtIter < nJtPtBins; jtIter++){
@@ -527,10 +535,10 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){	  
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	    jtRecoOverGenVEta_Mean_p[iter][centIter][etaPtIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%s_%sMean_%s_%s_h", etaPtStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#mu_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
-	  }
 
-	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	    jtRecoOverGenVEta_Res_p[iter][centIter][etaPtIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%s_%sRes_%s_%s_h", etaPtStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#sigma_{Reco./Gen.} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
+
+	    jtRecoOverGenVEta_ResOverMean_p[iter][centIter][etaPtIter][qgIter][mIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%s_%sResOverMean_%s_%s_h", etaPtStr.c_str(), qg[qgIter].c_str(), meanFit[mIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet #eta;#frac{#sigma_{Reco./Gen.}}{#mu_{Reco./Gen.}} (%s)", jetAlgo.at(iter).c_str()), nJtEtaBins, jtEtaBins);
 	  }
 
 	  for(Int_t jtIter = 0; jtIter < nJtEtaBins; jtIter++){
@@ -785,8 +793,9 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       }
       
       if(config.GetIsGammaJet()){
-	if(recoTempLeadingPhoPt < config.GetMinGammaPt()) continue;
-	if(TMath::Abs(recoTempLeadingPhoEta) > 1.44) continue;
+	if(!config.KeepEventGamma(recoTempLeadingPhoPt, recoTempLeadingPhoEta)) continue;
+	//	if(recoTempLeadingPhoPt < config.GetMinGammaPt()) continue;
+	//	if(TMath::Abs(recoTempLeadingPhoEta) > 1.44) continue;
 	if(config.GetGammaPtHatStagger() + config.GetInputPtHat(pthatIter) > recoTempLeadingPhoPt) continue;
       }
       
@@ -794,10 +803,12 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       if(config.GetIsZJet()){
 	Bool_t isGoodMu = false;
 	Bool_t isGoodEle = false;
-	if(tempLeadingMuPt_ > 10 && tempSubleadingMuPt_ > 5) isGoodMu = true;
-	if(tempLeadingElePt_ > 10 && tempSubleadingElePt_ > 5) isGoodEle = true;
+	if(config.KeepEventLeptons(tempLeadingMuPt_, tempLeadingMuEta_, tempSubleadingMuPt_, tempSubleadingMuEta_, 13)) isGoodMu = true;
+	if(config.KeepEventLeptons(tempLeadingElePt_, tempLeadingEleEta_, tempSubleadingElePt_, tempSubleadingEleEta_, 11)) isGoodEle = true;
 
 	if(!isGoodMu && ! isGoodEle) continue;
+
+	Bool_t isGoodZ = false;
 
 	if(isGoodMu){
 	  TLorentzVector mu1, mu2;
@@ -806,21 +817,19 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  
 	  TLorentzVector z = mu1+mu2;
 
-	  if(z.Pt() < 20) continue;
-
-	  //	  tempZPhi_ = z.Phi();
+	  if(config.KeepEventZ(z.Pt())) isGoodZ = true;
 	}
-	else if(isGoodEle){
+	if(isGoodEle){
 	  TLorentzVector ele1, ele2;
 	  ele1.SetPtEtaPhiM(tempLeadingElePt_, tempLeadingEleEta_, tempLeadingElePhi_, eleMass);
 	  ele2.SetPtEtaPhiM(tempSubleadingElePt_, tempSubleadingEleEta_, tempSubleadingElePhi_, eleMass);
 
 	  TLorentzVector z = ele1+ele2;
 
-	  if(z.Pt() < 20) continue;
-
-	  //	  tempZPhi_ = z.Phi();
+	  if(config.KeepEventZ(z.Pt())) isGoodZ = true;
 	}
+
+	if(!isGoodZ) continue;
       }
 
       if(TMath::Abs(vz_) > 15) continue;
@@ -920,7 +929,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	  //	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], recoTempLeadingPhoPt) < .1) continue;
 	  
-	  Float_t jtWeight = config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], refEta_[algoIter][jtIter], recoTempLeadingPhoPt);
+	  Float_t jtWeight = config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], refEta_[algoIter][jtIter]);
 
 	  Double_t truncPtHatWeight = config.GetTruncPtHatWeight(ptHat_[0], refPt_[algoIter][jtIter]);
 	  //	  truncPtHatWeight = 1;
@@ -1130,14 +1139,17 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDevError();
 	    
 	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
-	    
-	    FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true/*config.GetDoWeights()*/);
+
+	    FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true, config.GetFitAcceptProbability(), config.GetDoIterativeFit(), config.GetFitIterations(), config.GetFitIterationInterval());
 	    
 	    for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	      jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
 	      jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
 	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
 	      jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+
+	      jtRecoOverGenVPt_ResOverMean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]/tempMean[mIter]);
+	      jtRecoOverGenVPt_ResOverMean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
 	    }
 	  }
 
@@ -1152,7 +1164,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    tempRes[0] = jtDPhiVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDev();
 	    tempResErr[0] = jtDPhiVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDevError();
 	    	    
-	    FitGauss(jtDPhiVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true/*config.GetDoWeights()*/);
+	    FitGauss(jtDPhiVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true, config.GetFitAcceptProbability(), config.GetDoIterativeFit(), config.GetFitIterations(), config.GetFitIterationInterval());
 	    
 	    for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	      jtDPhiVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->SetBinContent(jtIter+1, tempMean[mIter]);
@@ -1195,7 +1207,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    
-	    FitGauss(jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true/*config.GetDoWeights()*/);
+	    FitGauss(jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true, config.GetFitAcceptProbability(), config.GetDoIterativeFit(), config.GetFitIterations(), config.GetFitIterationInterval());
 	    
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    
@@ -1204,6 +1216,8 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	      jtRecoOverGenVEta_Mean_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->SetBinError(jtIter+1, tempMeanErr[mIter]);
 	      jtRecoOverGenVEta_Res_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]);
 	      jtRecoOverGenVEta_Res_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
+	      jtRecoOverGenVEta_ResOverMean_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->SetBinContent(jtIter+1, tempRes[mIter]/tempMean[mIter]);
+	      jtRecoOverGenVEta_ResOverMean_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->SetBinError(jtIter+1, tempResErr[mIter]);
 	    }
 	    
 	  if(debugMode) std::cout << __LINE__ << std::endl;
@@ -1350,6 +1364,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    }
 	    */
 	    jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	    jtRecoOverGenVPt_ResOverMean_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	    jtDPhiVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	  }
 
@@ -1358,6 +1373,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  for(Int_t jtEtaPtIter = 0; jtEtaPtIter < nJtEtaPtBins+1; jtEtaPtIter++){
 	    jtRecoOverGenVEta_Mean_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	    jtRecoOverGenVEta_Res_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->Write("", TObject::kOverwrite);
+	    jtRecoOverGenVEta_ResOverMean_p[iter][centIter][jtEtaPtIter][qgIter][mIter]->Write("", TObject::kOverwrite);
 	  }
 	}
 
@@ -1421,6 +1437,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	    delete jtRecoOverGenVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
 	    delete jtRecoOverGenVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
+	    delete jtRecoOverGenVPt_ResOverMean_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
 
 	    delete jtDPhiVPt_Mean_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
 	    delete jtDPhiVPt_Res_p[iter][centIter][jtPtEtaIter][qgIter][mIter];
@@ -1440,6 +1457,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  for(Int_t mIter = 0; mIter < nMeanFit; mIter++){
 	    delete jtRecoOverGenVEta_Mean_p[iter][centIter][jtEtaPtIter][qgIter][mIter];
 	    delete jtRecoOverGenVEta_Res_p[iter][centIter][jtEtaPtIter][qgIter][mIter];
+	    delete jtRecoOverGenVEta_ResOverMean_p[iter][centIter][jtEtaPtIter][qgIter][mIter];
 	  }
 	}
 	if(debugMode) std::cout << __LINE__ << std::endl;

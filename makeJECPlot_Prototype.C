@@ -32,9 +32,9 @@ const Int_t nHistName = 3;
 const std::string inHistName[nHistName] = {"RecoOverGen", "Eff", "DPhi"};
 const std::string xAxisLabel[nHistName] = {"Reco./Gen.", "Eff.", "<#Delta#phi>"};
 
-const Int_t nMeanRes = 2;
-const std::string meanResStr[nMeanRes] = {"Mean", "Res"};
-const std::string meanResStr2[nMeanRes] = {"#mu", "#sigma"};
+const Int_t nMeanRes = 3;
+const std::string meanResStr[nMeanRes] = {"Mean", "Res", "ResOverMean"};
+const std::string meanResStr2[nMeanRes] = {"#mu", "#sigma", "#sigma/#mu"};
 
 const Int_t nQG = 3;
 const std::string qgStr[nQG] = {"Inc", "Q", "G"};
@@ -74,7 +74,7 @@ Float_t setMaxMinNice(Float_t inMaxMin, Bool_t isMax){
 }
 
 
-int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, const Int_t inHistNum, const Int_t meanResNum, const std::string ptEtaStr)
+int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, const std::string fitMeanStr, const Int_t inHistNum, const Int_t meanResNum, const std::string ptEtaStr, std::vector<std::string>* pdfList_p)
 {
   std::string ptEtaStr2 = "Pt";
   std::string ptEtaStr3 = "p_{T}";
@@ -118,6 +118,15 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
   Int_t nDirTemp = 0;
   std::vector<std::string>* dirNames_p = new std::vector<std::string>;
 
+  Bool_t isMean = false;
+  if(meanResStr[meanResNum].size() == 4 && meanResStr[meanResNum].find("Mean") != std::string::npos) isMean = true;
+
+  Bool_t isRes = false;
+  if(meanResStr[meanResNum].size() == 3 && meanResStr[meanResNum].find("Res") != std::string::npos) isRes = true;
+
+  Bool_t isResOverMean = false;
+  if(meanResStr[meanResNum].size() == 11 && meanResStr[meanResNum].find("ResOverMean") != std::string::npos) isResOverMean = true;
+
   for(Int_t iter = 0; iter < nContents; iter++){
     TString className = ((TKey*)inFile_p->GetListOfKeys()->At(iter))->GetClassName();
     TString name = ((TKey*)inFile_p->GetListOfKeys()->At(iter))->GetName();
@@ -136,17 +145,32 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
 	if(className2.Index("TH1") >= 0){
 	  if(name2.Index(Form("%s_", meanResStr[meanResNum].c_str())) >= 0){
+	
+	    if((isMean || isRes) && name2.Index("ResOverMean_") >= 0) continue;
+
 	    if(name2.Index(ptEtaStr.c_str()) < 0) continue;
 
-	    if(name2.Index("Res") >= 0 && name2.Index("_Q_") >= 0) continue;
-	    if(name2.Index("Res") >= 0 && name2.Index("_G_") >= 0) continue;
-	    if(name2.Index("Mean") >= 0 && name2.Index("_G_") >= 0) continue;
+	    if(isRes && name2.Index("Res") >= 0 && name2.Index("_Q_") >= 0) continue;
+	    if(isRes && name2.Index("Res") >= 0 && name2.Index("_G_") >= 0) continue;
+
+	    if(isResOverMean && name2.Index("ResOverMean") >= 0 && name2.Index("_Q_") >= 0) continue;
+	    if(isResOverMean && name2.Index("ResOverMean") >= 0 && name2.Index("_G_") >= 0) continue;
+
+	    if(isMean && name2.Index("Mean") >= 0 && name2.Index("_G_") >= 0) continue;
 
 	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 	    if(!strcmp("Eff", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 
-	    if(name2.Index("RecoOverGen") >= 0 && name2.Index("_Mean_") >= 0) continue;
-	    if(name2.Index("RecoOverGen") >= 0 && name2.Index("_Res_") >= 0) continue;
+	    if(fitMeanStr.size() != 0){
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_Mean_") >= 0) continue;
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_Res_") >= 0) continue;
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_ResOverMean_") >= 0) continue;
+	    }
+	    else{
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_FitMean_") >= 0) continue;
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_FitRes_") >= 0) continue;
+	      if(name2.Index("RecoOverGen") >= 0 && name2.Index("_FitResOverMean_") >= 0) continue;
+	    }
 
 	    if(name2.Index("RecoPtCut5") >= 0) continue;
 	    if(name2.Index("RecoPtCut30") >= 0) continue;
@@ -228,7 +252,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
     th1Canv_p[iter]->SetGlobalMaxMin();
     
-    if(meanResStr[meanResNum].find("Mean") != std::string::npos){
+    if(isMean){
       if(inHistName[inHistNum].find("RecoOverGen") != std::string::npos){
 	th1Canv_p[iter]->CapGlobalMaxMin(1.5, 0.8);
 	th1Canv_p[iter]->UnderCapGlobalMaxMin(1.5, 0.8);
@@ -238,7 +262,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 	th1Canv_p[iter]->UnderCapGlobalMaxMin(1.05, 0.0);
       }
     }
-    if(meanResStr[meanResNum].find("Res") != std::string::npos){
+    if(isRes || isResOverMean){
       if(inHistName[inHistNum].find("DPhi") != std::string::npos){
 	th1Canv_p[iter]->CapGlobalMaxMin(0.2, 0.0);
 	th1Canv_p[iter]->UnderCapGlobalMaxMin(0.2, 0.0);
@@ -293,10 +317,10 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
   TLegend* meanLeg_p;
   if(isPbPb){
     if(!strcmp("Eff", inHistName[inHistNum].c_str())) meanLeg_p = new TLegend(.70, .08, .90, .55);
-    if(!strcmp("Res", meanResStr[meanResNum].c_str())) meanLeg_p = new TLegend(.70, .08, .90, .35);
+    if(isRes || isResOverMean) meanLeg_p = new TLegend(.70, .08, .90, .35);
     else meanLeg_p = new TLegend(.50, .68, .90, .95);
   }
-  else if(!strcmp("Res", meanResStr[meanResNum].c_str())) meanLeg_p = new TLegend(.3, .38, .90, .5);
+  else if(isRes || isResOverMean) meanLeg_p = new TLegend(.3, .38, .90, .5);
   else if(!strcmp("Eff", inHistName[inHistNum].c_str())) meanLeg_p = new TLegend(.6, .25, .95, .75);
   else meanLeg_p = new TLegend(.50, .58, .90, .85);
 
@@ -312,7 +336,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     if(isPbPb) meanLeg2_p = new TLegend(.60, .25, .95, .75);
     else  meanLeg2_p = new TLegend(.50, .35, .95, .85);
   }
-  else if(!strcmp("Res", meanResStr[meanResNum].c_str())) meanLeg2_p = new TLegend(.50, .38, .90, .65);
+  else if(isRes || isResOverMean) meanLeg2_p = new TLegend(.50, .38, .90, .65);
   else meanLeg2_p = new TLegend(.50, .68, .90, .95);
   meanLeg2_p->SetBorderSize(0);
   meanLeg2_p->SetFillColor(0);
@@ -387,6 +411,8 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       else if(th1Name.find("_FitMean_") != std::string::npos) legStr = "Fit Mean";
       else if(th1Name.find("_Res_") != std::string::npos) legStr = "Hist Res.";
       else if(th1Name.find("_FitRes_") != std::string::npos) legStr = "Fit Res.";
+      else if(th1Name.find("_ResOverMean_") != std::string::npos) legStr = "Hist #frac{Res.}{Mean}";
+      else if(th1Name.find("_FitResOverMean_") != std::string::npos) legStr = "Fit #frac{Res.}{Mean}";
     }
 
     th1Canv_p[dirPos]->SetHist(th1_p[iter], centPos, 0, th1CanvCount[dirPos][centPos][0], legStr);
@@ -399,6 +425,8 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     th1Canv_p[dirIter]->canv_p->cd();
     th1Canv_p[dirIter]->MakeHistMaxMinNice();
     th1Canv_p[dirIter]->SetHistMaxMin();
+
+    gStyle->SetOptStat(0);
 
     th1Canv_p[dirIter]->SetPanelWhiteSpace();
 
@@ -528,12 +556,12 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
   for(Int_t iter = 0; iter < nDir; iter++){
     if(inHistName[inHistNum].find("RecoOverGen") != std::string::npos){
-      if(meanResStr[meanResNum].find("Mean") != std::string::npos){
+      if(isMean){
 	th1Canv_p[iter]->DrawGlobalHorizontalLine(1);
 	th1Canv_p[iter]->DrawGlobalHorizontalLine(.95);
 	th1Canv_p[iter]->DrawGlobalHorizontalLine(1.05);
       }
-      else if(meanResStr[meanResNum].find("Res") != std::string::npos){
+      else if(isRes || isResOverMean){
 	th1Canv_p[iter]->pads_p[0][0]->cd();
 	csn_p->Draw("SAME C");
 	csn2_p->Draw("SAME C");
@@ -549,7 +577,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       th1Canv_p[iter]->DrawGlobalVerticalLine(30);
     }
 
-    if(inHistName[inHistNum].find("Eff") != std::string::npos && meanResStr[meanResNum].find("Mean") != std::string::npos){
+    if(inHistName[inHistNum].find("Eff") != std::string::npos && isMean){
       th1Canv_p[iter]->DrawGlobalHorizontalLine(1);
       th1Canv_p[iter]->DrawGlobalVerticalLine(30);
     }
@@ -562,7 +590,16 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     if(addResCorrStr) resCorrStr = "_RESCORR";
 
     //    th1Canv_p[iter]->canv_p->Write(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str()), TObject::kOverwrite);
-    claverCanvasSaving(th1Canv_p[iter]->canv_p, Form("pdfDir/%s_%s%s%sc_%s", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str(), config.GetConfigFileNameNoExt().c_str()), "pdf");
+    
+    std::string pdfName =  Form("pdfDir/%s_%s%s%s%sc_%s", dirNames_p->at(iter).c_str(), fitMeanStr.c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str(), config.GetConfigFileNameNoExt().c_str());
+
+    gStyle->SetOptStat(0);
+
+    claverCanvasSaving(th1Canv_p[iter]->canv_p, pdfName.c_str(), "pdf");
+    TDatime* date = new TDatime();
+    pdfName = pdfName + "_" + std::to_string(date->GetDate()) + ".pdf";
+    delete date;
+    pdfList_p->push_back(pdfName);
   }
 
   outFile_p->Close();
@@ -592,7 +629,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 }
 
 
-int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, const Int_t inHistNum, const std::string ptEtaStr, const Int_t qgNum)
+int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, const Int_t inHistNum, const std::string ptEtaStr, const Int_t qgNum, std::vector<std::string>* pdfList_p)
 {
   std::string ptEtaStr2 = "Pt";
   std::string ptEtaStr3 = "p_{T}";
@@ -1020,7 +1057,12 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
   for(Int_t iter = 0; iter < nDir; iter++){
     for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       //      th1Canv_p[iter][centIter]->Write("", TObject::kOverwrite);
-      claverCanvasSaving(th1Canv_p[iter][centIter], Form("pdfDir/%s", th1Canv_p[iter][centIter]->GetName()), "pdf");
+
+      std::string pdfName = Form("pdfDir/%s", th1Canv_p[iter][centIter]->GetName());
+      claverCanvasSaving(th1Canv_p[iter][centIter], pdfName.c_str(), "pdf");
+      TDatime* date = new TDatime();
+      pdfName = pdfName + "_" + std::to_string(date->GetDate()) + ".pdf";
+      pdfList_p->push_back(pdfName);
     }
   }
 
@@ -1053,7 +1095,207 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
 }
 
 
-int makeJECPlot(const std::string inFileName)
+int makeTEXPlots(const std::string inFileName, std::string texFileName, std::vector<std::string>* pdfList_p)
+{
+  std::string texDirName = texFileName;
+  while(texDirName.find(".") != std::string::npos){
+    texDirName.replace(texDirName.find("."), texDirName.size() - texDirName.find("."), "");
+  }
+
+  checkMakeDir("texDir");
+
+  texDirName = "texDir/" + texDirName + "_TeXDir";
+  checkMakeDir(texDirName);
+  std::string texDirNamePDF = texDirName + "/pdfDir";
+  checkMakeDir(texDirNamePDF);
+
+  texFileName = texDirName + "/" + texFileName;
+
+  std::ofstream texFile(texFileName.c_str());
+  texFile.close();
+
+  texFile.open(texFileName.c_str(), std::ios::app);
+
+  texFile << "\\RequirePackage{xspace}" << std::endl;
+  texFile << "\\RequirePackage{amsmath}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\documentclass[xcolor=dvipsnames]{beamer}" << std::endl;
+  texFile << "\\usetheme{Warsaw}" << std::endl;
+  texFile << "\\setbeamercolor{structure}{fg=NavyBlue!90!NavyBlue}" << std::endl;
+  texFile << "\\setbeamercolor{footlinecolor}{fg=white,bg=lightgray}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\newcommand{\\pt}{\\ensuremath{p_{\\mathrm{T}}}\\xspace}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\setbeamersize{text margin left=5pt,text margin right=5pt}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\setbeamertemplate{frametitle}" << std::endl;
+  texFile << "{" << std::endl;
+  texFile << "    \\nointerlineskip" << std::endl;
+  texFile << "    \\begin{beamercolorbox}[sep=0.3cm, ht=1.8em, wd=\\paperwidth]{frametitle}" << std::endl;
+  texFile << "        \\vbox{}\\vskip-2ex%" << std::endl;
+  texFile << "        \\strut\\insertframetitle\\strut" << std::endl;
+  texFile << "        \\vskip-0.8ex%" << std::endl;
+  texFile << "    \\end{beamercolorbox}" << std::endl;
+  texFile << "}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\setbeamertemplate{footline}{%" << std::endl;
+  texFile << "  \\begin{beamercolorbox}[sep=.8em,wd=\\paperwidth,leftskip=0.5cm,rightskip=0.5cm]{footlinecolor}" << std::endl;
+  texFile << "    \\hspace{0.3cm}%" << std::endl;
+  texFile << "    \\hfill\\insertauthor \\hfill\\insertpagenumber" << std::endl;
+  texFile << "  \\end{beamercolorbox}%" << std::endl;
+  texFile << "}" << std::endl;
+  texFile << "\\setbeamertemplate{navigation symbols}{}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\setbeamertemplate{itemize item}[circle]" << std::endl;
+  texFile << "\\setbeamertemplate{itemize subitem}[circle]" << std::endl;
+  texFile << "\\setbeamertemplate{itemize subsubitem}[circle]" << std::endl;
+  texFile << "\\setbeamercolor{itemize item}{fg=black}" << std::endl;
+  texFile << "\\setbeamercolor{itemize subitem}{fg=black}" << std::endl;
+  texFile << "\\setbeamercolor{itemize subsubitem}{fg=black}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\definecolor{links}{HTML}{00BFFF}" << std::endl;
+  texFile << "\\hypersetup{colorlinks,linkcolor=,urlcolor=links}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\author[CM]{Placeholder}" << std::endl;
+  texFile << std::endl;
+
+  texFile << "\\begin{document}" << std::endl;
+  texFile << "\\begin{frame}" << std::endl;
+  TDatime* date = new TDatime();
+  texFile << "\\frametitle{\\centerline{JEC Validation (" << date->GetYear() << "." << date->GetMonth() << "." << date->GetDay() << ")}}" << std::endl;
+  delete date;
+  texFile << " \\begin{itemize}" << std::endl;
+  texFile << "  \\fontsize{10}{10}\\selectfont" << std::endl;
+  texFile << "  \\item{Placeholder}" << std::endl;
+  texFile << "  \\begin{itemize}" << std::endl;
+  texFile << "   \\fontsize{10}{10}\\selectfont" << std::endl;
+  texFile << "   \\item{Placeholder}" << std::endl;
+  texFile << "  \\end{itemize}" << std::endl;
+  texFile << " \\end{itemize}" << std::endl;
+  texFile << "\\end{frame}" << std::endl;
+
+  texFile << std::endl;
+  
+  for(unsigned int iter = 0; iter < pdfList_p->size(); iter++){
+    std::ifstream src(pdfList_p->at(iter).c_str(), std::ios::binary);
+
+    std::string destName = pdfList_p->at(iter);
+    while(destName.find("/") != std::string::npos){
+      destName.replace(0, destName.find("/")+1, "");
+    }
+    destName = texDirNamePDF + "/" + destName;
+
+    std::ofstream dest(destName.c_str(), std::ios::binary);
+    dest << src.rdbuf();
+
+    dest.close();
+    src.close();
+  }
+
+  for(unsigned int iter = 0; iter < pdfList_p->size(); iter++){
+    if(pdfList_p->at(iter).find("EtaInc") == std::string::npos && pdfList_p->at(iter).find("PtInc") == std::string::npos) continue;
+
+    texFile << "\\begin{frame}" << std::endl;
+    texFile << "\\frametitle{\\centerline{Placeholder}}" << std::endl;
+    texFile << "\\begin{center}" << std::endl;
+    texFile << "\\includegraphics[width=.6\\textwidth]{" << pdfList_p->at(iter) << "}" << std::endl;
+    texFile << "\\end{center}" << std::endl;
+    texFile << "\\begin{itemize}" << std::endl;
+    texFile << "\\item{Placeholder}" << std::endl;
+    texFile << "\\end{itemize}" << std::endl;
+    texFile << "\\end{frame}" << std::endl;
+
+    texFile << std::endl;
+  }
+
+
+  texFile << "\\begin{frame}" << std::endl;
+  texFile << "\\frametitle{\\centerline{Conclusions}}" << std::endl;
+  texFile << " \\begin{itemize}" << std::endl;
+  texFile << "  \\fontsize{10}{10}\\selectfont" << std::endl;
+  texFile << "  \\item{Placeholder}" << std::endl;
+  texFile << "  \\begin{itemize}" << std::endl;
+  texFile << "   \\fontsize{10}{10}\\selectfont" << std::endl;
+  texFile << "   \\item{Placeholder}" << std::endl;
+  texFile << "  \\end{itemize}" << std::endl;
+  texFile << " \\end{itemize}" << std::endl;
+  texFile << "\\end{frame}" << std::endl;
+  
+  texFile << std::endl;
+
+  texFile << "\\begin{frame}" << std::endl;
+  texFile << "\\frametitle{\\centerline{Backup}}" << std::endl;
+  texFile << "\\end{frame}" << std::endl;
+
+  texFile << std::endl;
+
+
+  TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
+  std::vector<std::string> tempConfigParams = returnRootFileContentsList(inFile_p, "TNamed", "configParamsDir");
+  const Int_t nConfigParams = tempConfigParams.size();
+
+  for(Int_t iter = 0; iter < nConfigParams/16 + 1; iter++){
+    texFile << "\\begin{frame}" << std::endl;
+    texFile << "\\frametitle{\\centerline{Config. Params (" << iter+1  << "/" << nConfigParams/16 + 1 << ")}}" << std::endl;
+    texFile << "\\begin{itemize}" << std::endl;
+    texFile << "\\fontsize{6}{6}\\selectfont" << std::endl;
+    
+    for(Int_t iter2 = 16*iter; iter2 < TMath::Min(16*(iter+1), nConfigParams); iter2++){
+      TNamed* tempName_p = (TNamed*)inFile_p->Get(tempConfigParams.at(iter2).c_str());
+      std::string tempConfigParam = tempConfigParams.at(iter2);
+      std::string tempParamName = tempName_p->GetTitle();
+      while(tempConfigParam.find("/") != std::string::npos){
+	tempConfigParam.replace(0, tempConfigParam.find("/")+1, "");
+      }
+      
+      int charIter = 0;
+      while(charIter < (int)tempConfigParam.size()){
+	if(tempConfigParam.substr(charIter, 1).find("_") != std::string::npos){
+	  if(charIter == 0) tempConfigParam.replace(charIter, 1, "\\_");
+	  else if(tempConfigParam.substr(charIter-1, 1).find("\\") == std::string::npos) tempConfigParam.replace(charIter, 1, "\\_");
+	  else charIter++;
+	}
+	else charIter++;
+      }
+
+      charIter = 0;
+      while(charIter < (int)tempParamName.size()){
+	if(tempParamName.substr(charIter, 1).find("_") != std::string::npos){
+	  if(charIter == 0) tempParamName.replace(charIter, 1, "\\_");
+	  else if(tempParamName.substr(charIter-1, 1).find("\\") == std::string::npos) tempParamName.replace(charIter, 1, "\\_");
+	  else charIter++;
+	}
+	else charIter++;
+      }
+      
+      texFile << "\\item{" << tempConfigParam << "=" << tempParamName << "}" << std::endl;
+    }
+
+    texFile << "\\end{itemize}" << std::endl;
+    texFile << "\\end{frame}" << std::endl;
+    texFile << std::endl;
+  }
+
+  texFile << "\\end{document}" << std::endl;
+
+  inFile_p->Close();
+  delete inFile_p;
+
+  texFile.close();
+
+  return 0;
+}
+
+
+int makeJECPlot(const std::string inFileName, const bool produceTeX)
 {
   jecConfigParser config;
   if(!config.SetConfigParser(inFileName)) return 1;
@@ -1098,52 +1340,81 @@ int makeJECPlot(const std::string inFileName)
 
   checkMakeDir("pdfDir");
   
+  std::vector<std::string>* pdfList_p = new std::vector<std::string>;
+
   int retVal = 0;
 
   for(Int_t iter = 0; iter < nHistName; iter++){
     for(Int_t ptEtaIter = 0; ptEtaIter < nJtPtEtaBins+1; ptEtaIter++){
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
 
-	if(iter == 0) retVal += makeJECPlotMeanRes(inFileName, config, iter, iter2, jtPtEtaBinStrings[ptEtaIter]);
-	
+	if(iter == 0){
+	  retVal += makeJECPlotMeanRes(inFileName, config, "", iter, iter2, jtPtEtaBinStrings[ptEtaIter], pdfList_p);
+	  retVal += makeJECPlotMeanRes(inFileName, config, "Fit", iter, iter2, jtPtEtaBinStrings[ptEtaIter], pdfList_p);
+	}
       }
       
       if(iter == 0){
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
-	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtPtEtaBinStrings[ptEtaIter], qgIter);
+	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtPtEtaBinStrings[ptEtaIter], qgIter, pdfList_p);
 	}
       }
     }
 
     for(Int_t etaPtIter = 0; etaPtIter < nJtEtaPtBins+1; etaPtIter++){
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
-	if(iter == 0) retVal += makeJECPlotMeanRes(inFileName, config, iter, iter2, jtEtaPtBinStrings[etaPtIter]);
+	if(iter == 0){
+	  retVal += makeJECPlotMeanRes(inFileName, config, "", iter, iter2, jtEtaPtBinStrings[etaPtIter], pdfList_p);
+	  retVal += makeJECPlotMeanRes(inFileName, config, "Fit", iter, iter2, jtEtaPtBinStrings[etaPtIter], pdfList_p);
+	}
       }
       
       if(iter == 0){
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
-	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtEtaPtBinStrings[etaPtIter], qgIter);
+	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtEtaPtBinStrings[etaPtIter], qgIter, pdfList_p);
 	}
       }
     }
+  }
 
+  if(produceTeX){
+    TDatime* date = new TDatime();
+    const std::string texName = config.GetConfigFileNameNoExt() + "_" + std::to_string(date->GetDate()) + ".tex";
+    std::cout << "TexName: " << texName << std::endl;
+    delete date;
+    makeTEXPlots(inFileName, texName, pdfList_p);
   }
   
+  pdfList_p->clear();
+  delete pdfList_p;
   
   return retVal;
 }
 
 int main(int argc, char *argv[])
 {
-  if(argc != 2){
-    std::cout << "Usage: makeJECPlot_Prototype.exe <inHistFile>" << std::endl;
+  if(argc != 3){
+    std::cout << "Usage: makeJECPlot_Prototype.exe <inHistFile> <produceTeX>" << std::endl;
     std::cout << "Number of args given: " << argc << std::endl;
     for(int iter = 0; iter < argc; iter++){
       std::cout << "  argv[" << iter << "]: " << argv[iter] << std::endl;
     }
+    std::cout << "return -1" << std::endl;
     return -1;
   }
 
-  int retVal = makeJECPlot(argv[1]);
+  std::string texBool = argv[2];
+
+  if(texBool.size() != 1){
+    std::cout << "argument <produceTeX> is not 0 or 1. return -1" << std::endl;
+    return -1;
+  }
+
+  if(texBool.find("0") == std::string::npos && texBool.find("1") == std::string::npos){
+    std::cout << "argument <produceTeX> is not 0 or 1. return -1" << std::endl;
+    return -1;
+  }
+
+  int retVal = makeJECPlot(argv[1], std::stoi(argv[2]));
   return retVal;
 }
