@@ -39,7 +39,7 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 31;
+  const static unsigned int nValidConfigVals = 39;
   enum configIter {EVENTTYPE, //0
 		   OUTNAME, //1
 		   NPTHAT, //2
@@ -61,16 +61,24 @@ class jecConfigParser{
 		   NJTETAPTBINS, //18
 		   JTETAPTMIN, //19
 		   JTETAPTMAX, //20
-		   NJTPTETABINS, //21
-		   DOWEIGHTS, //22
-		   DOWEIGHTTRUNC, //23
-		   PTHATWEIGHTS, //24
-		   DOPTHATSTAGGER, //25
-		   STAGGEROFFSET, //26
-		   NCENTBINS, //27
-		   CENTBINS, //28
-		   MINGAMMAPT, //29
-		   GAMMAPTHATSTAGGER}; //30
+		   DOJTETAPTLOGBINS, //21
+		   DOJTETAPTCUSTOMBINS, //22
+		   JTETAPTCUSTOMBINS, //23
+		   NJTPTETABINS, //24
+		   JTPTETAMIN, //25
+		   JTPTETAMAX, //26
+		   DOJTPTETAABS, //27
+		   DOJTPTETACUSTOMBINS, //28
+		   JTPTETACUSTOMBINS, //29
+		   DOWEIGHTS, //30
+		   DOWEIGHTTRUNC, //31
+		   PTHATWEIGHTS, //32
+		   DOPTHATSTAGGER, //33
+		   STAGGEROFFSET, //34
+		   NCENTBINS, //35
+		   CENTBINS, //36
+		   MINGAMMAPT, //37
+		   GAMMAPTHATSTAGGER}; //38
  
   const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
 							 "OUTNAME", //1
@@ -93,16 +101,24 @@ class jecConfigParser{
 							 "NJTETAPTBINS", //18
 							 "JTETAPTMIN", //19
 							 "JTETAPTMAX", //20
-							 "NJTPTETABINS", //21
-							 "DOWEIGHTS", //22
-							 "DOWEIGHTTRUNC", //23
-							 "PTHATWEIGHTS", //24
-							 "DOPTHATSTAGGER", //25
-							 "STAGGEROFFSET", //26
-							 "NCENTBINS", //27
-							 "CENTBINS", //28
-							 "MINGAMMAPT", //29
-							 "GAMMAPTHATSTAGGER"}; //30
+							 "DOJTETAPTLOGBINS", //21
+							 "DOJTETAPTCUSTOMBINS", //22
+							 "JTETAPTCUSTOMBINS", //23
+							 "NJTPTETABINS", //24
+							 "JTPTETAMIN", //25
+							 "JTPTETAMAX", //26
+							 "DOJTPTETAABS", //27
+							 "DOJTPTETACUSTOMBINS", //28
+							 "JTPTETACUSTOMBINS", //29
+							 "DOWEIGHTS", //30
+							 "DOWEIGHTTRUNC", //31
+							 "PTHATWEIGHTS", //32
+							 "DOPTHATSTAGGER", //33
+							 "STAGGEROFFSET", //34
+							 "NCENTBINS", //35
+							 "CENTBINS", //36
+							 "MINGAMMAPT", //37
+							 "GAMMAPTHATSTAGGER"}; //38
 
 
   const std::string configTypes[nValidConfigVals] = {"std::string", //0
@@ -126,16 +142,24 @@ class jecConfigParser{
 						     "unsigned int", //18
 						     "unsigned float", //19
 						     "unsigned float", //20
-						     "unsigned int", //21
+						     "bool", //21
 						     "bool", //22
-						     "bool", //23
-						     "std::vector<float>", //24
-						     "bool", //25
-						     "unsigned float", //26
-						     "unsgined int", //27
-						     "std::vector<unsigned int>", //28
-						     "unsigned float", //29
-						     "unsigned float"}; //30
+						     "std::vector<float>", //23
+						     "unsigned int", //24
+						     "float", //25
+						     "float", //26
+						     "bool", //27
+						     "bool", //28
+						     "std::vector<float>", //29
+						     "bool", //30
+						     "bool", //31
+						     "std::vector<float>", //32
+						     "bool", //33
+						     "unsigned float", //34
+						     "unsgined int", //35
+						     "std::vector<unsigned int>", //36
+						     "unsigned float", //37
+						     "unsigned float"}; //38
   
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
@@ -159,16 +183,24 @@ class jecConfigParser{
 							     "3", //18
 							     "35", //19
 							     "10000", //20
-							     "3", //21
+							     "FALSE", //21
 							     "FALSE", //22
-							     "FALSE", //23
-							     "", //24
-							     "TRUE", //25
-							     "20", //26
-							     "2", //27
-							     "100,30,0", //28
-							     "40.", //29
-							     "0."}; //30
+							     "", //23
+							     "3", //24
+							     "0.0", //25
+							     "1.6", //26
+							     "TRUE", //27
+							     "FALSE", //28
+							     "", //29
+							     "FALSE", //30
+							     "FALSE", //31
+							     "", //32
+							     "TRUE", //33
+							     "20", //34
+							     "2", //35
+							     "100,30,0", //36
+							     "40.", //37
+							     "0."}; //38
 
   unsigned int nConfigInputs[nValidConfigVals] = {0, //0
 						  0, //1
@@ -200,7 +232,15 @@ class jecConfigParser{
 						  0, //27
 						  0, //28
 						  0, //29
-						  0}; //30
+						  0, //30
+						  0, //31
+						  0, //32
+						  0, //33
+						  0, //34
+						  0, //35
+						  0, //36
+						  0, //37
+						  0}; //38
   
 
   std::string configInputs[nValidConfigVals] = {"", //0
@@ -233,7 +273,15 @@ class jecConfigParser{
 						"", //27
 						"", //28
 						"", //29
-						""}; //30
+						"", //30
+						"", //31
+						"", //32
+						"", //33
+						"", //34
+						"", //35
+						"", //36
+						"", //37
+						""}; //38
 
 
   std::string configFileName = "";
@@ -271,8 +319,16 @@ class jecConfigParser{
   unsigned int nJtEtaPtBins = 3;
   float jtEtaPtMin = 35;
   float jtEtaPtMax = 10000;
+  bool doJtEtaPtLogBins = false;
+  bool doJtEtaPtCustomBins = false;
+  std::vector<float> jtEtaPtCustomBins;
 
   unsigned int nJtPtEtaBins = 3;
+  float jtPtEtaMin = 0.0;
+  float jtPtEtaMax = 1.6;
+  bool doJtPtEtaAbs = true;
+  bool doJtPtEtaCustomBins = true;
+  std::vector<float> jtPtEtaCustomBins;
 
   bool doWeights = false;
   bool doWeightTrunc = false;
@@ -301,6 +357,8 @@ class jecConfigParser{
   bool ProcessUFloat(const std::string, float &, jecConfigParser::configIter);
   bool ProcessFloat(const std::string, float &, jecConfigParser::configIter);
   bool ProcessBool(const std::string, bool &, jecConfigParser::configIter);
+  std::string FloatRangeToTitleString(const float, const float);
+  std::string FloatRangeToLabelString(const float, const float, const std::string);
   bool SetConfigParser(const std::string);
   void ResetConfigParser();
   std::string GetConfigFileName();
@@ -340,7 +398,19 @@ class jecConfigParser{
   unsigned int GetNJtEtaPtBins();
   float GetJtEtaPtMin();
   float GetJtEtaPtMax();
+  bool GetDoJtEtaPtLogBins();
+  bool GetDoJtEtaPtCustomBins();
+  void FillJtEtaPtCustomBins(Float_t jtEtaPtBinArr[]);
+  void FillJtEtaPtCustomBins(Double_t jtEtaPtBinArr[]);
+  int GetJtEtaPtBinPos(const float);
   unsigned int GetNJtPtEtaBins();
+  float GetJtPtEtaMin();
+  float GetJtPtEtaMax();
+  bool GetDoJtPtEtaAbs();
+  bool GetDoJtPtEtaCustomBins();
+  void FillJtPtEtaCustomBins(Float_t jtPtEtaBinArr[]);
+  void FillJtPtEtaCustomBins(Double_t jtPtEtaBinArr[]);
+  int GetJtPtEtaBinPos(const float);
   bool GetDoWeights();
   bool GetDoWeightTrunc();
   bool GetDoPthatStagger();
@@ -503,6 +573,43 @@ bool jecConfigParser::ProcessBool(std::string boolString, bool& returnBool, jecC
   return true;
 }
 
+std::string jecConfigParser::FloatRangeToTitleString(const float rangeMin, const float rangeMax)
+{
+  std::string negMinString = "";
+  if(rangeMin < 0) negMinString = "Neg";
+
+  std::string negMaxString = "";
+  if(rangeMax < 0) negMaxString = "Neg";
+
+  Int_t rangeLowInt = std::trunc(TMath::Abs(rangeMin));
+  Int_t rangeHiInt = std::trunc(TMath::Abs(rangeMax));
+
+  Int_t rangeLowDec = std::trunc(TMath::Abs(rangeMin*10) - rangeLowInt*10);
+  Int_t rangeHiDec = std::trunc(TMath::Abs(rangeMax*10) - rangeHiInt*10);
+
+  std::string rangeString = negMinString + std::to_string(rangeLowInt) + "p" + std::to_string(rangeLowDec) + "to" + negMaxString + std::to_string(rangeHiInt) + "p" + std::to_string(rangeHiDec);
+
+  return rangeString;
+}
+
+std::string jecConfigParser::FloatRangeToLabelString(const float rangeMin, const float rangeMax, const std::string inBetweenString)
+{
+  std::string negMinString = "";
+  if(rangeMin < 0) negMinString = "-";
+
+  std::string negMaxString = "";
+  if(rangeMax < 0) negMaxString = "-";
+
+  Int_t rangeLowInt = std::trunc(TMath::Abs(rangeMin));
+  Int_t rangeHiInt = std::trunc(TMath::Abs(rangeMax));
+
+  Int_t rangeLowDec = std::trunc(TMath::Abs(rangeMin*10) - rangeLowInt*10);
+  Int_t rangeHiDec = std::trunc(TMath::Abs(rangeMax*10) - rangeHiInt*10);
+
+  std::string rangeString = negMinString + std::to_string(rangeLowInt) + "." + std::to_string(rangeLowDec) + "<" + inBetweenString + "<" + negMaxString + std::to_string(rangeHiInt) + "." + std::to_string(rangeHiDec);
+
+  return rangeString;
+}
 
 bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 {
@@ -622,9 +729,10 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
   //begin setting class params
   const unsigned int nLines = lines.size();  
+  unsigned int replaceIter = 0;
 
-  for(unsigned int iter = 0; iter < nLines; iter++){
-    tempStr = lines.at(iter);
+  while(replaceIter < nLines){
+    tempStr = lines.at(replaceIter);
     std::string valStr = tempStr.substr(tempStr.find("=")+1, tempStr.size() - tempStr.find("=")+1);
     tempStr.replace(tempStr.find("="), tempStr.size() - tempStr.find("="), "");
 
@@ -646,13 +754,16 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 
     int valPos = -1;
     for(unsigned iter2 = 0; iter2 < nValidConfigVals; iter2++){
-      if(valStr.size() == validConfigVals[iter2].size() && valStr.find(validConfigVals[iter2]) != std::string::npos){
+      if(valStr.find(validConfigVals[iter2]) != std::string::npos){
 	valPos = iter2;
 	break;
       }
     }
 
-    if(valPos == -1) continue;
+    if(valPos == -1){
+      replaceIter++;
+      continue;
+    }
 
     int tempPos = -1;
     for(unsigned iter2 = 0; iter2 < nValidConfigVals; iter2++){
@@ -663,7 +774,7 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     }
 
     if(valPos == tempPos){
-      std::cout << "Request to input value at \'" << validConfigVals[valPos] << "\' for line \'" << lines.at(iter) << "\' is self-referential. Fix config, return empty." << std::endl;
+      std::cout << "Request to input value at \'" << validConfigVals[valPos] << "\' for line \'" << lines.at(replaceIter) << "\' is self-referential. Fix config, return empty." << std::endl;
       ResetConfigParser();
       return false;
     }
@@ -693,13 +804,16 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       }
 
       if(newValStr.size() == 0){
-	std::cout << "Request to input value at \'" << validConfigVals[valPos] << "\' for line \'" << lines.at(iter) << "\' is invalid. \'" << validConfigVals[valPos] << "\' not specified in config file. Fix config, return empty." << std::endl;
+	std::cout << "Request to input value at \'" << validConfigVals[valPos] << "\' for line \'" << lines.at(replaceIter) << "\' is invalid. \'" << validConfigVals[valPos] << "\' not specified in config file. Fix config, return empty." << std::endl;
 	ResetConfigParser();
 	return false;
       }
 
-      std::cout << "Replacing \'" << lines.at(iter) << "\' with \'" << tempStr << " = " << newValStr << "\'." << std::endl;
-      lines.at(iter) = tempStr + " = " + newValStr;
+      std::string replaceStr = lines.at(replaceIter);
+      replaceStr.replace(replaceStr.find(validConfigVals[valPos]), validConfigVals[valPos].size(), newValStr);
+
+      std::cout << "Replacing \'" << lines.at(replaceIter) << "\' with \'" << replaceStr << "\'." << std::endl;
+      lines.at(replaceIter) = replaceStr;
     }
   }
 
@@ -932,11 +1046,112 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       if(!ProcessUFloat(valStr, jtEtaPtMax, JTETAPTMAX)) continue;
     }
 
+
+
+    if(tempStr.substr(0, validConfigVals[DOJTETAPTLOGBINS].size()).find(validConfigVals[DOJTETAPTLOGBINS]) != std::string::npos){
+      if(!ProcessBool(valStr, doJtEtaPtLogBins, DOJTETAPTLOGBINS)){
+	doJtEtaPtLogBins = false;
+	continue;
+      }
+    }  
+
+    if(tempStr.substr(0, validConfigVals[DOJTETAPTCUSTOMBINS].size()).find(validConfigVals[DOJTETAPTCUSTOMBINS]) != std::string::npos){
+      if(!ProcessBool(valStr, doJtEtaPtCustomBins, DOJTETAPTCUSTOMBINS)){
+	doJtEtaPtCustomBins = false;
+	continue;
+      }
+    }  
+
+    if(tempStr.substr(0, validConfigVals[JTETAPTCUSTOMBINS].size()).find(validConfigVals[JTETAPTCUSTOMBINS]) != std::string::npos){
+      valStr = valStr + ",";
+      while(valStr.find(",,") != std::string::npos){
+	valStr.replace(valStr.find(",,"), 2, ",");
+      }
+
+      std::string tempValStr = valStr;
+      bool isGoodString = true;
+      while(tempValStr.find(",") != std::string::npos){
+        if(!StringIsGoodFloat(tempValStr.substr(0, tempValStr.find(",")))){
+	  std::cout << tempStr << " value \'" << valStr << "\', specifically \'" << tempValStr.substr(0, tempValStr.find(",")) << "\' is invalid. Return empty." << std::endl;
+          isGoodString = false;
+          break;
+        }
+        else tempValStr.replace(0, tempValStr.find(",")+1, "");
+      }
+      if(!isGoodString) continue;
+
+      // setting
+      jtEtaPtCustomBins.clear();
+      configInputs[JTETAPTCUSTOMBINS] = valStr;
+      while(valStr.find(",") != std::string::npos){
+	jtEtaPtCustomBins.push_back(std::stof(valStr.substr(0, valStr.find(","))));
+	valStr.replace(0, valStr.find(",")+1, "");
+      }
+      if(valStr.size() != 0) jtEtaPtCustomBins.push_back(std::stof(valStr));
+
+      nConfigInputs[JTETAPTCUSTOMBINS]++;      
+    }
+
+
+
     if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 
     if(tempStr.substr(0, validConfigVals[NJTPTETABINS].size()).find(validConfigVals[NJTPTETABINS]) != std::string::npos){
       if(!ProcessUInt(valStr, nJtPtEtaBins, NJTPTETABINS)) continue;
     }
+
+    if(tempStr.substr(0, validConfigVals[JTPTETAMIN].size()).find(validConfigVals[JTPTETAMIN]) != std::string::npos){
+      if(!ProcessFloat(valStr, jtPtEtaMin, JTPTETAMIN)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[JTPTETAMAX].size()).find(validConfigVals[JTPTETAMAX]) != std::string::npos){
+      if(!ProcessFloat(valStr, jtPtEtaMax, JTPTETAMAX)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[DOJTPTETAABS].size()).find(validConfigVals[DOJTPTETAABS]) != std::string::npos){
+	if(!ProcessBool(valStr, doJtPtEtaAbs, DOJTPTETAABS)){
+	  doJtPtEtaAbs = false;
+	  continue;
+	}
+      }
+
+    if(tempStr.substr(0, validConfigVals[DOJTPTETACUSTOMBINS].size()).find(validConfigVals[DOJTPTETACUSTOMBINS]) != std::string::npos){
+	if(!ProcessBool(valStr, doJtPtEtaCustomBins, DOJTPTETACUSTOMBINS)){
+	  doJtPtEtaAbs = false;
+	  continue;
+	}
+      }
+
+    if(tempStr.substr(0, validConfigVals[JTPTETACUSTOMBINS].size()).find(validConfigVals[JTPTETACUSTOMBINS]) != std::string::npos){
+      valStr = valStr + ",";
+      while(valStr.find(",,") != std::string::npos){
+	valStr.replace(valStr.find(",,"), 2, ",");
+      }
+
+      std::string tempValStr = valStr;
+      bool isGoodString = true;
+      while(tempValStr.find(",") != std::string::npos){
+        if(!StringIsGoodFloat(tempValStr.substr(0, tempValStr.find(",")))){
+	  std::cout << tempStr << " value \'" << valStr << "\', specifically \'" << tempValStr.substr(0, tempValStr.find(",")) << "\' is invalid. Return empty." << std::endl;
+          isGoodString = false;
+          break;
+        }
+        else tempValStr.replace(0, tempValStr.find(",")+1, "");
+      }
+      if(!isGoodString) continue;
+
+      // setting
+      jtPtEtaCustomBins.clear();
+      configInputs[JTPTETACUSTOMBINS] = valStr;
+      while(valStr.find(",") != std::string::npos){
+	jtPtEtaCustomBins.push_back(std::stof(valStr.substr(0, valStr.find(","))));
+	valStr.replace(0, valStr.find(",")+1, "");
+      }
+      if(valStr.size() != 0) jtPtEtaCustomBins.push_back(std::stof(valStr));
+
+      nConfigInputs[JTPTETACUSTOMBINS]++;      
+    }
+
 
     if(tempStr.substr(0, validConfigVals[DOWEIGHTS].size()).find(validConfigVals[DOWEIGHTS]) != std::string::npos){
       if(!ProcessBool(valStr, doWeights, DOWEIGHTS)){
@@ -1292,8 +1507,6 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
-  //EDITING HERE PLEASE CONTINUE
-
   if(doJtPtCustomBins && doJtPtLogBins){
     std::cout << "JTPTCUSTOMBINS AND DOJTPTLOGBINGS both TRUE. Return false" << std::endl;
     
@@ -1357,8 +1570,6 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
-
-
   if(doJtEtaCustomBins){
     if(jtEtaCustomBins.size()-1 != nJtEtaBins){
       std::cout << "DOJTETACUSTOMBINS == TRUE" << std::endl;
@@ -1415,6 +1626,135 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
+  
+  if(doJtEtaPtCustomBins && doJtEtaPtLogBins){
+    std::cout << "JTETAPTCUSTOMBINS AND DOJTETAPTLOGBINGS both TRUE. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(doJtEtaPtCustomBins){
+    if(jtEtaPtCustomBins.size()-1 != nJtEtaPtBins){
+      std::cout << "DOJTETAPTCUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTETAPTCUSTOMBINS size-1, \'" << jtEtaPtCustomBins.size() << " - 1\' not equal to nJtEtaPtBins, \'" << nJtEtaPtBins << "\'. Return false" << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+
+    bool areCustomBinsOrdered = true;
+    
+    for(unsigned int jtEtaPtBinIter = 0; jtEtaPtBinIter < nJtEtaPtBins; jtEtaPtBinIter++){
+      if(jtEtaPtCustomBins.at(jtEtaPtBinIter) > jtEtaPtCustomBins.at(jtEtaPtBinIter+1)){
+	areCustomBinsOrdered = false;
+	break;
+      }
+    }
+
+    if(!areCustomBinsOrdered){
+      std::cout << "DOJTETAPTCUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTETAPTCUSTOMBINS, \'";
+      
+      for(unsigned int jtEtaPtBinIter = 0; jtEtaPtBinIter < nJtEtaPtBins; jtEtaPtBinIter++){
+	std::cout << jtEtaPtCustomBins.at(jtEtaPtBinIter) << ",";
+      }
+
+      std::cout << jtEtaPtCustomBins.at(nJtEtaPtBins) << "\' not ordered. Return false" << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+
+    if(jtEtaPtCustomBins.at(0) != jtEtaPtMin){
+      std::cout << "DOJTETAPTCUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTETAPTCUSTOMBINS min, \'" << jtEtaPtCustomBins.at(0) << "\' not equal to jtEtaPtMin, \'" << jtEtaPtMin << "\'. Return false" << std::endl;
+
+      ResetConfigParser();
+      return false;
+    }
+
+    if(jtEtaPtCustomBins.at(nJtEtaPtBins) != jtEtaPtMax){
+      std::cout << "DOJTETAPTCUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTETAPTCUSTOMBINS max, \'" << jtEtaPtCustomBins.at(nJtEtaPtBins) << "\' not equal to jtEtaPtMax, \'" << jtEtaPtMax << "\'. Return false" << std::endl;
+
+      ResetConfigParser();
+      return false;
+    }
+  }
+
+  if(jtPtEtaMin >= jtPtEtaMax){
+    std::cout << "JTPTETAMIN, \'" << jtPtEtaMin << "\' is greater than or equal to JTPTETAMAX, \'" << jtPtEtaMax << "\'. Return false." << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(doJtPtEtaAbs){
+    if(jtPtEtaMin < 0){
+      std::cout << "JTPTETAMIN, \'" << jtPtEtaMin << "\' is less than zero and DOJTPTETAABS is TRUE. Return false." << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+
+    if(jtPtEtaMax < 0){
+      std::cout << "JTPTETAMAX, \'" << jtPtEtaMax << "\' is less than zero and DOJTPTETAABS is TRUE. Return false." << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+  }
+
+  if(doJtPtEtaCustomBins){
+    if(jtPtEtaCustomBins.size()-1 != nJtPtEtaBins){
+      std::cout << "DOJTPTETACUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTPTETACUSTOMBINS size-1, \'" << jtPtEtaCustomBins.size() << " - 1\' not equal to nJtPtEtaBins, \'" << nJtPtEtaBins << "\'. Return false" << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+
+    bool areCustomBinsOrdered = true;
+    
+    for(unsigned int jtPtEtaBinIter = 0; jtPtEtaBinIter < nJtPtEtaBins; jtPtEtaBinIter++){
+      if(jtPtEtaCustomBins.at(jtPtEtaBinIter) > jtPtEtaCustomBins.at(jtPtEtaBinIter+1)){
+	areCustomBinsOrdered = false;
+	break;
+      }
+    }
+
+    if(!areCustomBinsOrdered){
+      std::cout << "DOJTPTETACUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTPTETACUSTOMBINS, \'";
+      
+      for(unsigned int jtPtEtaBinIter = 0; jtPtEtaBinIter < nJtPtEtaBins; jtPtEtaBinIter++){
+	std::cout << jtPtEtaCustomBins.at(jtPtEtaBinIter) << ",";
+      }
+
+      std::cout << jtPtEtaCustomBins.at(nJtPtEtaBins) << "\' not ordered. Return false" << std::endl;
+      
+      ResetConfigParser();
+      return false;
+    }
+
+    if(jtPtEtaCustomBins.at(0) != jtPtEtaMin){
+      std::cout << "DOJTPTETACUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTPTETACUSTOMBINS min, \'" << jtPtEtaCustomBins.at(0) << "\' not equal to jtPtEtaMin, \'" << jtPtEtaMin << "\'. Return false" << std::endl;
+
+      ResetConfigParser();
+      return false;
+    }
+
+    if(jtPtEtaCustomBins.at(nJtPtEtaBins) != jtPtEtaMax){
+      std::cout << "DOJTPTETACUSTOMBINS == TRUE" << std::endl;
+      std::cout << "JTPTETACUSTOMBINS max, \'" << jtPtEtaCustomBins.at(nJtPtEtaBins) << "\' not equal to jtPtEtaMax, \'" << jtPtEtaMax << "\'. Return false" << std::endl;
+
+      ResetConfigParser();
+      return false;
+    }
+  }
+  
 
   if((doWeights && doPthatStagger) || (!doWeights && !doPthatStagger)){
     std::cout << "DOWEIGHTS, \'" << doWeights << "\', and DOPTHATSTAGGER, \'" << doPthatStagger << "\', both have same value. Please choose one. Return false." << std::endl;
@@ -1505,48 +1845,56 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
 void jecConfigParser::ResetConfigParser()
 {
   configFileName = "";
-  eventTypeStr = "";
-  outNameStr = "";
-  isDijet = false;
+  eventTypeStr = ""; //0
+  outNameStr = ""; //1
+  isDijet = false; 
   isGammaJet = false;
   isZJet = false;
-  nPthats = 0;
-  pthats.clear();
-  inputStrings.clear();
+  nPthats = 0; //2
+  pthats.clear(); //3
+  inputStrings.clear(); //4
   inputFileList.clear();
   inputFilePtHats.clear();
-  isPbPb = false;
-  jetTypes = "";
+  isPbPb = false; //5
+  jetTypes = ""; //6
   jetTypesKeep.clear();
   jetTypesRemove.clear();
   jetTypesFinal.clear();
-  nJtPtBins = 0;
-  jtPtMin = 30.;
-  jtPtMax = 100.;
-  nJtEtaBins = 16;
-  jtEtaMin = -1.6;
-  jtEtaMax = 1.6;
-  doJtEtaCustomBins = false;
-  jtEtaCustomBins.clear();
-  nJtEtaPtBins = 3;
-  jtEtaPtMin = 35;
-  jtEtaPtMax = 10000;
-  nJtPtEtaBins = 3;
-  doJtPtLogBins = false;
-  doJtPtCustomBins = false;
-  jtPtCustomBins.clear();
-  doWeights = false;
-  doWeightTrunc = false;
-  pthatWeights.clear();
-  doPthatStagger = true;
-  staggerOffset = 20.;
-  nCentBins = 2;
-  centBins.clear();
+  nJtPtBins = 0; //7
+  jtPtMin = 30.; //8
+  jtPtMax = 100.; //9
+  doJtPtLogBins = false; //10
+  doJtPtCustomBins = false; //11
+  jtPtCustomBins.clear(); //12
+  nJtEtaBins = 16; //13
+  jtEtaMin = -1.6; //14
+  jtEtaMax = 1.6; //15
+  doJtEtaCustomBins = false; //16
+  jtEtaCustomBins.clear(); //17
+  nJtEtaPtBins = 3; //18
+  jtEtaPtMin = 35; //19
+  jtEtaPtMax = 10000; //20
+  doJtEtaPtLogBins = false; //21
+  doJtEtaPtCustomBins = false; //22
+  jtEtaPtCustomBins.clear(); //23
+  nJtPtEtaBins = 3; //24
+  jtPtEtaMin = 0.0; //25
+  jtPtEtaMax = 1.6; //26
+  doJtPtEtaAbs = false; //27
+  doJtPtEtaCustomBins = false; //28
+  jtPtEtaCustomBins.clear(); //29
+  doWeights = false; //30
+  doWeightTrunc = false; //31
+  pthatWeights.clear(); //32
+  doPthatStagger = true; //33
+  staggerOffset = 20.; //34
+  nCentBins = 2; //35
+  centBins.clear(); //36
   centBins.push_back(100);
   centBins.push_back(30);
   centBins.push_back(0);
-  minGammaPt = 40.;
-  gammaPtHatStagger = 0.;
+  minGammaPt = 40.; //37
+  gammaPtHatStagger = 0.; //38
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -1732,7 +2080,92 @@ void jecConfigParser::FillJtEtaCustomBins(Double_t jtEtaBinArr[])
 unsigned int jecConfigParser::GetNJtEtaPtBins(){return nJtEtaPtBins;}
 float jecConfigParser::GetJtEtaPtMin(){return jtEtaPtMin;}
 float jecConfigParser::GetJtEtaPtMax(){return jtEtaPtMax;}
+bool jecConfigParser::GetDoJtEtaPtLogBins(){return doJtEtaPtLogBins;}
+bool jecConfigParser::GetDoJtEtaPtCustomBins(){return doJtEtaPtCustomBins;}
+
+void jecConfigParser::FillJtEtaPtCustomBins(Float_t jtEtaPtBinArr[])
+{
+  for(unsigned int jtEtaPtBinIter = 0; jtEtaPtBinIter < nJtEtaPtBins+1; jtEtaPtBinIter++){
+    jtEtaPtBinArr[jtEtaPtBinIter] = jtEtaPtCustomBins.at(jtEtaPtBinIter);
+  }
+
+  return;
+}
+
+void jecConfigParser::FillJtEtaPtCustomBins(Double_t jtEtaPtBinArr[])
+{
+  for(unsigned int jtEtaPtBinIter = 0; jtEtaPtBinIter < nJtEtaPtBins+1; jtEtaPtBinIter++){
+    jtEtaPtBinArr[jtEtaPtBinIter] = jtEtaPtCustomBins.at(jtEtaPtBinIter);
+  }
+
+  return;
+}
+
+int jecConfigParser::GetJtEtaPtBinPos(const float jtPt)
+{
+  int binPos = -1;
+
+  double tempJtEtaPtBins[nJtEtaPtBins+1];
+  if(doJtEtaPtLogBins) getLogBins(jtEtaPtMin, jtEtaPtMax, nJtEtaPtBins, tempJtEtaPtBins);
+  else if(doJtEtaPtCustomBins) FillJtEtaPtCustomBins(tempJtEtaPtBins);
+  else getLinBins(jtEtaPtMin, jtEtaPtMax, nJtEtaPtBins, tempJtEtaPtBins);
+
+  for(unsigned int iter = 0; iter < nJtEtaPtBins; iter++){
+    if(tempJtEtaPtBins[iter] <= jtPt && tempJtEtaPtBins[iter+1] > jtPt){
+      binPos = iter;
+      break;
+    }
+  }
+
+  return binPos;
+}
+
 unsigned int jecConfigParser::GetNJtPtEtaBins(){return nJtPtEtaBins;}
+float jecConfigParser::GetJtPtEtaMin(){return jtPtEtaMin;}
+float jecConfigParser::GetJtPtEtaMax(){return jtPtEtaMax;}
+bool jecConfigParser::GetDoJtPtEtaAbs(){return doJtPtEtaAbs;}
+bool jecConfigParser::GetDoJtPtEtaCustomBins(){return doJtPtEtaCustomBins;}
+
+void jecConfigParser::FillJtPtEtaCustomBins(Float_t jtPtEtaBinArr[])
+{
+  for(unsigned int jtPtEtaBinIter = 0; jtPtEtaBinIter < nJtPtEtaBins+1; jtPtEtaBinIter++){
+    jtPtEtaBinArr[jtPtEtaBinIter] = jtPtEtaCustomBins.at(jtPtEtaBinIter);
+  }
+
+  return;
+}
+
+void jecConfigParser::FillJtPtEtaCustomBins(Double_t jtPtEtaBinArr[])
+{
+  for(unsigned int jtPtEtaBinIter = 0; jtPtEtaBinIter < nJtPtEtaBins+1; jtPtEtaBinIter++){
+    jtPtEtaBinArr[jtPtEtaBinIter] = jtPtEtaCustomBins.at(jtPtEtaBinIter);
+  }
+
+  return;
+}
+
+int jecConfigParser::GetJtPtEtaBinPos(const float jtEta)
+{
+  int binPos = -1;
+
+  double tempJtPtEtaBins[nJtPtEtaBins+1];
+  if(doJtPtEtaCustomBins) FillJtPtEtaCustomBins(tempJtPtEtaBins);
+  else getLinBins(jtPtEtaMin, jtPtEtaMax, nJtPtEtaBins, tempJtPtEtaBins);
+
+  float tempJtEta = jtEta;
+  if(doJtPtEtaAbs) tempJtEta = TMath::Abs(tempJtEta);
+
+  for(unsigned int iter = 0; iter < nJtPtEtaBins; iter++){
+    if(tempJtPtEtaBins[iter] <= tempJtEta && tempJtPtEtaBins[iter+1] > tempJtEta){
+      binPos = iter;
+      break;
+    }
+  }
+
+  return binPos;
+}
+
+
 bool jecConfigParser::GetDoWeights(){return doWeights;}
 bool jecConfigParser::GetDoWeightTrunc(){return doWeightTrunc;}
 bool jecConfigParser::GetDoPthatStagger(){return doPthatStagger;}
