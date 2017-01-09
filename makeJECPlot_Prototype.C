@@ -100,8 +100,8 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
   for(Int_t iter = 0; iter < nCentBins; iter++){
     if(isPbPb){
-      centStrings[iter] = "Cent" + std::to_string(centBins.at(iter+1)) + "to" + std::to_string(centBins.at(iter));
-      centStrings2[iter] = std::to_string(centBins.at(iter+1)) + "-" + std::to_string(centBins.at(iter)) + "%";
+      centStrings[iter] = "Cent" + std::to_string(centBins.at(iter)) + "to" + std::to_string(centBins.at(iter+1));
+      centStrings2[iter] = std::to_string(centBins.at(iter)) + "-" + std::to_string(centBins.at(iter+1)) + "%";
     }
     else{
       centStrings[iter] = "PP";
@@ -364,10 +364,14 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     //    if(!strcmp("Eta", ptEtaStr2[ptEtaNum].c_str())) th1XMin += .1;
     th1_p[iter]->SetAxisRange(th1XMin, th1_p[iter]->GetXaxis()->GetXmax(), "X");
 
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     Int_t dirPos = -1;
     for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
       
+      if(debugMode) std::cout << __LINE__ << std::endl;
+
       //std::cout << dirNames_p->at(dirIter) << ", " << th1Name << std::endl;
 
       if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
@@ -377,6 +381,9 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
         break;
       }
     }
+
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
 
     th1Canv_p[dirPos]->canv_p->cd();
   
@@ -391,6 +398,9 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       }
     }
     else centPos = 0;
+
+
+    if(debugMode) std::cout << __LINE__ << std::endl;
     
 
     std::string legStr = "Incl.";
@@ -415,8 +425,12 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       else if(th1Name.find("_FitResOverMean_") != std::string::npos) legStr = "Fit #frac{Res.}{Mean}";
     }
 
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     th1Canv_p[dirPos]->SetHist(th1_p[iter], centPos, 0, th1CanvCount[dirPos][centPos][0], legStr);
     th1CanvCount[dirPos][centPos][0]++;
+
+    if(debugMode) std::cout << __LINE__ << std::endl;
   }
 
   if(debugMode) std::cout << __LINE__ << std::endl;
@@ -498,6 +512,8 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
   TF1* csn2_PP_p = 0;
   TF1* csn3_PP_p = 0;
 
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
   if(isPbPb){
     csn_p = new TF1("csn_p", "TMath::Sqrt([0]*[0] + [1]*[1]/x + [2]*[2]/(x*x))", 30, 150);
     csn_p->FixParameter(0, 0.061);
@@ -553,6 +569,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
   }
 
   TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
   for(Int_t iter = 0; iter < nDir; iter++){
     if(inHistName[inHistNum].find("RecoOverGen") != std::string::npos){
@@ -576,6 +593,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
       th1Canv_p[iter]->DrawGlobalVerticalLine(30);
     }
+    if(debugMode) std::cout << __LINE__ << std::endl;
 
     if(inHistName[inHistNum].find("Eff") != std::string::npos && isMean){
       th1Canv_p[iter]->DrawGlobalHorizontalLine(1);
@@ -586,11 +604,17 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       th1Canv_p[iter]->DrawGlobalVerticalLine(30);
     }
 
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     std::string resCorrStr = "";
     if(addResCorrStr) resCorrStr = "_RESCORR";
 
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     //    th1Canv_p[iter]->canv_p->Write(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str()), TObject::kOverwrite);
     
+    if(debugMode) std::cout << __LINE__ << std::endl;
+
     std::string pdfName =  Form("pdfDir/%s_%s%s%s%sc_%s", dirNames_p->at(iter).c_str(), fitMeanStr.c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str(), config.GetConfigFileNameNoExt().c_str());
 
     gStyle->SetOptStat(0);
@@ -601,6 +625,8 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
     delete date;
     pdfList_p->push_back(pdfName);
   }
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
 
   outFile_p->Close();
   delete outFile_p;
@@ -655,8 +681,8 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
 
   for(Int_t iter = 0; iter < nCentBins; iter++){
     if(isPbPb){
-      centStrings[iter] = "Cent" + std::to_string(centBins.at(iter+1)) + "to" + std::to_string(centBins.at(iter));
-      centStrings2[iter] = std::to_string(centBins.at(iter+1)) + "-" + std::to_string(centBins.at(iter)) + "%";
+      centStrings[iter] = "Cent" + std::to_string(centBins.at(iter)) + "to" + std::to_string(centBins.at(iter+1));
+      centStrings2[iter] = std::to_string(centBins.at(iter)) + "-" + std::to_string(centBins.at(iter+1)) + "%";
     }
     else{
       centStrings[iter] = "PP";
@@ -885,7 +911,7 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
 
       th1Canv_p[iter][centIter] = new TCanvas(Form("%s_%s_MeanPts%s%s%s_c_%s", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str(), centStr.c_str(), config.GetConfigFileNameNoExt().c_str()), Form("%s_%s_MeanPts%s%s%s_c_%s", dirNames_p->at(iter).c_str(), qgStr[qgNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr.c_str(), centStr.c_str(), config.GetConfigFileNameNoExt().c_str()), xBins*300, yBins*325);
       //      th1Canv_p[iter][centIter]->Divide(xBins, yBins, 0.0, 0.0);
-      th1Canv_p[iter][centIter]->Divide(xBins, yBins, .000005, .000005);
+      th1Canv_p[iter][centIter]->Divide(xBins, yBins, .000005, 0.000005);
     }
   }
 
@@ -1008,7 +1034,9 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
     th1_p[iter]->GetXaxis()->SetTitle(xAxisLabel[inHistNum].c_str());
     th1_p[iter]->GetYaxis()->SetTitle("Events");
 
-    th1_p[iter]->DrawCopy("E1 P");
+    gPad->SetTicks(gPad->GetTickx(), 1);
+
+    th1_p[iter]->DrawCopy("E1 P Y+");
     
     TLine* meanLine_p = new TLine(th1_p[iter]->GetMean(), th1_p[iter]->GetMinimum(), th1_p[iter]->GetMean(), th1_p[iter]->GetMaximum()*.8);
     meanLine_p->SetLineStyle(2);
@@ -1241,14 +1269,17 @@ int makeTEXPlots(const std::string inFileName, std::string texFileName, std::vec
   TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
   std::vector<std::string> tempConfigParams = returnRootFileContentsList(inFile_p, "TNamed", "configParamsDir");
   const Int_t nConfigParams = tempConfigParams.size();
+  const Int_t nParamPerSlide = 16;
 
-  for(Int_t iter = 0; iter < nConfigParams/16 + 1; iter++){
+  for(Int_t iter = 0; iter < nConfigParams/nParamPerSlide + 1; iter++){
+    if(iter == nConfigParams/nParamPerSlide && nConfigParams%nParamPerSlide == 0) break;
+
     texFile << "\\begin{frame}" << std::endl;
-    texFile << "\\frametitle{\\centerline{Config. Params (" << iter+1  << "/" << nConfigParams/16 + 1 << ")}}" << std::endl;
+    texFile << "\\frametitle{\\centerline{Config. Params (" << iter+1  << "/" << nConfigParams/nParamPerSlide + 1 << ")}}" << std::endl;
     texFile << "\\begin{itemize}" << std::endl;
     texFile << "\\fontsize{6}{6}\\selectfont" << std::endl;
     
-    for(Int_t iter2 = 16*iter; iter2 < TMath::Min(16*(iter+1), nConfigParams); iter2++){
+    for(Int_t iter2 = nParamPerSlide*iter; iter2 < TMath::Min(nParamPerSlide*(iter+1), nConfigParams); iter2++){
       TNamed* tempName_p = (TNamed*)inFile_p->Get(tempConfigParams.at(iter2).c_str());
       std::string tempConfigParam = tempConfigParams.at(iter2);
       std::string tempParamName = tempName_p->GetTitle();
@@ -1349,6 +1380,8 @@ int makeJECPlot(const std::string inFileName, const bool produceTeX)
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
 
 	if(iter == 0){
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+
 	  retVal += makeJECPlotMeanRes(inFileName, config, "", iter, iter2, jtPtEtaBinStrings[ptEtaIter], pdfList_p);
 	  retVal += makeJECPlotMeanRes(inFileName, config, "Fit", iter, iter2, jtPtEtaBinStrings[ptEtaIter], pdfList_p);
 	}
@@ -1356,6 +1389,7 @@ int makeJECPlot(const std::string inFileName, const bool produceTeX)
       
       if(iter == 0){
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
+	  if(debugMode) std::cout << __LINE__ << std::endl;
 	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtPtEtaBinStrings[ptEtaIter], qgIter, pdfList_p);
 	}
       }

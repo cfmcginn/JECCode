@@ -717,7 +717,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       Float_t tempSubleadingElePhi_ = -999;
       Float_t tempSubleadingEleEta_ = -999;
 
-      //      Float_t tempZPhi_ = -999;
+      Float_t tempZPhi_ = -999;
 
       if(config.GetIsGammaJet()){	
 	const Int_t nGenPart = mcPt_p->size();
@@ -817,7 +817,10 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  
 	  TLorentzVector z = mu1+mu2;
 
-	  if(config.KeepEventZ(z.Pt())) isGoodZ = true;
+	  if(config.KeepEventZ(z.Pt(), z.M())){
+	    isGoodZ = true;
+	    tempZPhi_ = z.Phi();
+	  }
 	}
 	if(isGoodEle){
 	  TLorentzVector ele1, ele2;
@@ -826,7 +829,10 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	  TLorentzVector z = ele1+ele2;
 
-	  if(config.KeepEventZ(z.Pt())) isGoodZ = true;
+	  if(config.KeepEventZ(z.Pt(), z.M())){
+	    isGoodZ = true;
+	    tempZPhi_ = z.Phi();
+	  }
 	}
 
 	if(!isGoodZ) continue;
@@ -909,9 +915,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       if(debugMode) std::cout << __LINE__ << std::endl;
 
       Float_t hiBinWeight = 1;
-      if(config.GetIsPbPb()) hiBinWeight = findNormNcoll(hiBin_, centPos, config.GetCentBins());
-      //	  hiBinWeight = 1;
-      
+      if(config.GetIsPbPb()) hiBinWeight = findNormNcoll(hiBin_, centPos, config.GetCentBins());      
       
       inputEvents[pthatIter]++;
 
@@ -930,7 +934,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  //	  if(config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], recoTempLeadingPhoPt) < .1) continue;
 	  
 	  Float_t jtWeight = config.GetJtWeight(pthatIter, refPt_[algoIter][jtIter], refEta_[algoIter][jtIter]);
-
+	
 	  Double_t truncPtHatWeight = config.GetTruncPtHatWeight(ptHat_[0], refPt_[algoIter][jtIter]);
 	  //	  truncPtHatWeight = 1;
 
@@ -941,7 +945,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	  if(config.GetIsGammaJet() && recoTempLeadingPhoPt > 0){
 	    if(getDR(recoTempLeadingPhoEta, recoTempLeadingPhoPhi, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
 	  }
-	  
+		  
 	  if(config.GetIsZJet()){
 	    if(tempLeadingMuPt_ > 10){
 	      if(getDR(tempLeadingMuEta_, tempLeadingMuPhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
@@ -955,11 +959,12 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    if(tempSubleadingElePt_ > 5){
 	      if(getDR(tempSubleadingEleEta_, tempSubleadingElePhi_, refEta_[algoIter][jtIter], refPhi_[algoIter][jtIter]) < 0.4) continue;
 	    }
-
-	    //	    if(TMath::Abs(getDPHI(tempZPhi_, refPhi_[algoIter][jtIter])) < 7.*TMath::Pi()/8.) continue;
+	    
+	    if(config.GetDoZJtDPhiCut()){
+	      if(!config.PassesZJetDPhiCut(tempZPhi_, refPhi_[algoIter][jtIter])) continue;
+	    }
 	  }
-	
-       
+	       
 
 	  Int_t qgPos[2] = {0, -1};
 	  if(TMath::Abs(refPartFlav_[algoIter][jtIter]) < 9) qgPos[1] = 1;
@@ -1138,7 +1143,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDev();
 	    tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDevError();
 	    
-	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
+	    //	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
 
 	    FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true, config.GetFitAcceptProbability(), config.GetDoIterativeFit(), config.GetFitIterations(), config.GetFitIterationInterval());
 	    
@@ -1203,7 +1208,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    
-	    if(jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][jtEtaPtIter][qgIter][jtIter] < 300. || jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->Rebin(2);
+	    //	    if(jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][jtEtaPtIter][qgIter][jtIter] < 300. || jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->Rebin(2);
 
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    

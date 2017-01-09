@@ -20,6 +20,7 @@
 #include "include/getLogBins.h"
 #include "include/getLinBins.h"
 #include "include/returnRootFileContentsList.h"
+#include "include/etaPhiFunc.h"
 
 
 class jecConfigParser{
@@ -40,7 +41,7 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 61;
+  const static unsigned int nValidConfigVals = 64;
   enum configIter {EVENTTYPE, //0
 		   OUTNAME, //1
 		   NPTHAT, //2
@@ -100,8 +101,11 @@ class jecConfigParser{
 		   MINMUONETA, //56
 		   MAXMUONETA, //57
 		   MINZPT, //58
-		   DOZJTDPHICUT, //59
-		   ZJTDPHICUT}; //60
+		   MAXZPT, //59
+		   MINZM, //60
+		   MAXZM, //61
+		   DOZJTDPHICUT, //62
+		   ZJTDPHICUT}; //63
  
   const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
 							 "OUTNAME", //1
@@ -162,8 +166,11 @@ class jecConfigParser{
 							 "MINMUONETA", //56
 							 "MAXMUONETA", //57
 							 "MINZPT", //58
-							 "DOZJTDPHICUT", //59
-							 "ZJTDPHICUT"}; //60
+							 "MAXZPT", //59
+							 "MINZM", //60
+							 "MAXZM", //61
+		       					 "DOZJTDPHICUT", //62
+							 "ZJTDPHICUT"}; //63
 
 
   const std::string configTypes[nValidConfigVals] = {"std::string", //0
@@ -225,8 +232,11 @@ class jecConfigParser{
 						     "float", //56
 						     "float", //57
 						     "unsigned float", //58
-						     "bool", //59
-						     "unsigned float"}; //60
+						     "unsigned float", //59
+						     "unsigned float", //60
+						     "unsigned float", //61
+						     "bool", //62
+						     "unsigned float"}; //63
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
 							     "", //1
@@ -287,8 +297,11 @@ class jecConfigParser{
 							     "-2.5", //56
 							     "2.5", //57
 							     "20", //58
-							     "FALSE", //59
-							     "7./8.*PI"}; //60
+							     "10000", //59
+							     "50", //60
+							     "130", //61
+							     "FALSE", //62
+							     "7./8.*PI"}; //63
 
   unsigned int nConfigInputs[nValidConfigVals] = {0, //0
 						  0, //1
@@ -350,7 +363,10 @@ class jecConfigParser{
 						  0, //57
 						  0, //58
 						  0, //59
-						  0}; //60
+						  0, //60
+						  0, //61
+						  0, //62
+						  0}; //63
   
 
   std::string configInputs[nValidConfigVals] = {"", //0
@@ -413,7 +429,10 @@ class jecConfigParser{
 						"", //57
 						"", //58
 						"", //59
-						""}; //60
+						"", //60
+						"", //61
+						"", //62
+						""}; //63
 
   std::string configFileName = "";
   std::string eventTypeStr = "";
@@ -499,6 +518,9 @@ class jecConfigParser{
   float maxMuonEta = 2.5;
 
   float minZPt = 40.;
+  float maxZPt = 10000.;
+  float minZM = 50;
+  float maxZM = 130.;
   bool doZJtDPhiCut = false;
   float zJtDPhiCut = 7.*TMath::Pi()/8.;
 
@@ -580,7 +602,8 @@ class jecConfigParser{
   bool GetDoPthatStagger();
   bool KeepEventGamma(const float, const float);
   bool KeepEventLeptons(const float, const float, const float, const float, const int);
-  bool KeepEventZ(const float);
+  bool KeepEventZ(const float, const float);
+  bool PassesZJetDPhiCut(const float, const float);
   float GetJtWeight(const unsigned int, const float, const float);
   double GetPtHatWeight(const float);
   double GetTruncPtHatWeight(const float, const float);
@@ -608,6 +631,9 @@ class jecConfigParser{
   float GetMinMuonEta();
   float GetMaxMuonEta();
   float GetMinZPt();
+  float GetMaxZPt();
+  float GetMinZM();
+  float GetMaxZM();
   bool GetDoZJtDPhiCut();
   float GetZJtDPhiCut();
 
@@ -1615,6 +1641,18 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       if(!ProcessUFloat(valStr, minZPt, MINZPT)) continue;
     }
 
+    if(tempStr.substr(0, validConfigVals[MAXZPT].size()).find(validConfigVals[MAXZPT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, maxZPt, MAXZPT)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MINZM].size()).find(validConfigVals[MINZM]) != std::string::npos){
+      if(!ProcessUFloat(valStr, minZM, MINZM)) continue;
+    }
+
+    if(tempStr.substr(0, validConfigVals[MAXZM].size()).find(validConfigVals[MAXZM]) != std::string::npos){
+      if(!ProcessUFloat(valStr, maxZM, MAXZM)) continue;
+    }
+
     if(tempStr.substr(0, validConfigVals[DOZJTDPHICUT].size()).find(validConfigVals[DOZJTDPHICUT]) != std::string::npos){
       if(!ProcessBool(valStr, doZJtDPhiCut, DOZJTDPHICUT)){
         doZJtDPhiCut = false;
@@ -2252,6 +2290,20 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     return false;
   }
 
+  if(minZPt >= maxZPt){
+    std::cout << "MINZPT, \'" << minZPt << "\', is greater than or equal to MAXZPT, \'" << maxZPt << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
+  if(minZM >= maxZM){
+    std::cout << "MINZM, \'" << minZM << "\', is greater than or equal to MAXZM, \'" << maxZM << "\'. Return false" << std::endl;
+
+    ResetConfigParser();
+    return false;
+  }
+
   return true;
 }
 
@@ -2326,10 +2378,13 @@ void jecConfigParser::ResetConfigParser()
   maxElectronEta = 1.44; //54  
   minMuonPt = 10.; //55
   minMuonEta = -2.5; //56
-  maxMuonEta = 2.5; //57  
-  minZPt = 20.; //58                                                                           
-  doZJtDPhiCut = false; //59
-  zJtDPhiCut = 7.*TMath::Pi()/8.; //60
+  maxMuonEta = 2.5; //57
+  minZPt = 20.; //58
+  maxZPt = 10000.; //59
+  minZM = 50.; //60
+  maxZM = 130.; //61
+  doZJtDPhiCut = false; //62
+  zJtDPhiCut = 7.*TMath::Pi()/8.; //63
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -2661,15 +2716,35 @@ bool jecConfigParser::KeepEventLeptons(const float leptonPt1, const float lepton
   return keepLeptons;
 }
 
-bool jecConfigParser::KeepEventZ(const float zPt)
+bool jecConfigParser::KeepEventZ(const float zPt, const float zM)
 {
   if(!isZJet){
     std::cout << "Warning: jecConfigParser::KeepEventZ called for ISZJET == FALSE. Return false." << std::endl;
     return false;
   }
 
-  if(zPt < minZPt) return false;
+  if(zPt < minZPt || zPt > maxZPt) return false;
+  else if(zM < minZM || zM > maxZM) return false;
   else return true;
+}
+
+bool jecConfigParser::PassesZJetDPhiCut(const float zPhi, const float jtPhi)
+{
+  if(!isZJet){
+    std::cout << "Warning: jecConfigParser::PassesZJetDPhiCut called for ISZJET == FALSE. Return false." << std::endl;
+    return false;
+  }
+
+  if(!doZJtDPhiCut){
+    std::cout << "Warning: jecConfigParser::PassesZJetDPhiCut callsed for DOZJTDPHICUT == FALSE. Return false." << std::endl;
+    return false;
+  }
+
+  float dPhi = TMath::Abs(getDPHI(zPhi, jtPhi));
+  bool retVal = false;
+  if(dPhi >= zJtDPhiCut) retVal = true;
+
+  return retVal;
 }
 
 
@@ -2918,6 +2993,9 @@ float jecConfigParser::GetMinMuonEta(){return minMuonEta;}
 float jecConfigParser::GetMaxMuonEta(){return maxMuonEta;}
 
 float jecConfigParser::GetMinZPt(){return minZPt;}
+float jecConfigParser::GetMaxZPt(){return maxZPt;}
+float jecConfigParser::GetMinZM(){return minZM;}
+float jecConfigParser::GetMaxZM(){return maxZM;}
 bool jecConfigParser::GetDoZJtDPhiCut(){return doZJtDPhiCut;}
 float jecConfigParser::GetZJtDPhiCut(){return zJtDPhiCut;}
 
