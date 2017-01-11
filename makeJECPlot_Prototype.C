@@ -43,13 +43,6 @@ const Int_t qgCol[nQG] = {kGray+1, kBlue, kRed};
 
 const std::string meanResPtsStr = "MeanResPts";
 
-/*
-const Int_t nPtEta = 5;
-const std::string ptEtaStr[nPtEta] = {"VPt_EtaInc_", "VPt_Eta0p0to0p5_", "VPt_Eta0p5to1p0_", "VPt_Eta1p0to1p6_", "VEta_PtInc_"};
-const std::string ptEtaStr2[nPtEta] = {"Pt", "Pt", "Pt", "Pt", "Eta"};
-const std::string ptEtaStr3[nPtEta] = {"p_{T}", "p_{T}", "p_{T}", "p_{T}", "#eta"};
-*/
-
 void claverCanvasSaving(TCanvas* c, TString s,TString format="gif"){
   TDatime* date = new TDatime();
   c->SaveAs(Form("%s_%d.%s",s.Data(),date->GetDate(), format.Data()));
@@ -71,6 +64,392 @@ Float_t setMaxMinNice(Float_t inMaxMin, Bool_t isMax){
   }
   
   return inMaxMin;
+}
+
+
+int makeJECPlotBasicQGDistrib(const std::string inFileName, jecConfigParser config, std::string distribStartString, const bool doBinWidthNorm, const bool doIncNorm, std::vector<std::string>* pdfList_p)
+{
+  const Bool_t isPbPb = config.GetIsPbPb();
+  const Int_t nCentBins = config.GetNCentBins();
+  std::vector<unsigned int> centBins = config.GetCentBins();
+
+  if(isPbPb){
+    if((unsigned int)(nCentBins+1) != centBins.size()){
+      std::cout << "Config nCentBins \'" << nCentBins << "\' != centBins.size \'" << centBins.size() << "\'. return 1" << std::endl;
+      return 1;
+    }
+  }
+  
+  std::string centStrings[nCentBins];
+  std::string centStrings2[nCentBins];
+  
+  for(Int_t iter = 0; iter < nCentBins; iter++){
+    if(isPbPb){
+      centStrings[iter] = "Cent" + std::to_string(centBins.at(iter)) + "to" + std::to_string(centBins.at(iter+1));
+      centStrings2[iter] = std::to_string(centBins.at(iter)) + "-" + std::to_string(centBins.at(iter+1)) + "%";
+    }
+    else{
+      centStrings[iter] = "PP";
+      centStrings2[iter] = "PP";
+    }
+  }
+
+  TFile* inFile_p = new TFile(inFileName.c_str(), "READ");
+  const Int_t nContents = inFile_p->GetListOfKeys()->GetEntries();
+
+  Int_t nTH1Temp = 0;
+  std::vector<std::string>* th1Names_p = new std::vector<std::string>;
+
+  Int_t nDirTemp = 0;
+  std::vector<std::string>* dirNames_p = new std::vector<std::string>;
+
+  for(Int_t iter = 0; iter < nContents; iter++){
+    TString className = ((TKey*)inFile_p->GetListOfKeys()->At(iter))->GetClassName();
+    TString name = ((TKey*)inFile_p->GetListOfKeys()->At(iter))->GetName();
+
+    if(className.Index("TDirectoryFile") >= 0 && name.Index("ak") >= 0){
+      nDirTemp++;
+      dirNames_p->push_back(name.Data());
+
+      TDirectoryFile* tempDir_p = (TDirectoryFile*)inFile_p->Get(name);
+
+      const Int_t nDirContents = tempDir_p->GetListOfKeys()->GetEntries();
+      
+      for(Int_t dirIter = 0; dirIter < nDirContents; dirIter++){
+	TString name2 = ((TKey*)tempDir_p->GetListOfKeys()->At(dirIter))->GetName();
+	TString className2 = ((TKey*)tempDir_p->GetListOfKeys()->At(dirIter))->GetClassName();
+
+	if(className2.Index("TH1") >= 0){
+	  if(name2.Index(distribStartString.c_str()) != 0) continue;
+
+	  nTH1Temp++;
+	  th1Names_p->push_back(Form("%s/%s", name.Data(), name2.Data()));
+	}
+      }
+    }
+  }
+  
+  const Int_t nTH1 = nTH1Temp;
+  const Int_t nDir = nDirTemp;
+  TH1F* th1_p[nTH1];  
+  
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  std::vector<superCanvas*> th1Canv_p(nDir);
+  //  TCanvas* th1Canv_p[nDir];
+
+  Int_t nXPanel = nCentBins;
+  Int_t nYPanel = 1;
+  if(!isPbPb){
+    nXPanel = 1;
+    nYPanel = 1;
+  }
+
+  Int_t th1CanvTot[nDir][nXPanel][nYPanel];
+  Int_t th1CanvCount[nDir][nXPanel][nYPanel];
+  
+  for(Int_t iter = 0; iter < nDir; iter++){
+    for(Int_t xIter = 0; xIter < nXPanel; xIter++){
+      for(Int_t yIter = 0; yIter < nYPanel; yIter++){
+        th1CanvTot[iter][xIter][yIter] = 0;
+        th1CanvCount[iter][xIter][yIter] = 0;
+      }
+    }
+  }
+
+
+  for(Int_t iter = 0; iter < nTH1; iter++){
+    std::string th1Name = th1Names_p->at(iter);
+
+    if(doIncNorm && th1Name.find("_Inc_") != std::string::npos) continue;
+
+    Int_t dirPos = -1;
+    for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+      std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+      if(pos != std::string::npos){
+        dirPos = dirIter;
+        break;
+      }
+    }
+
+    Int_t centPos = -1;
+    if(isPbPb){
+      for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+	std::size_t pos = th1Name.find(centStrings[centIter]);
+        if(pos != std::string::npos){
+          centPos = centIter;
+          break;
+        }
+      }
+    }
+    else centPos = 0;
+
+    th1CanvTot[dirPos][centPos][0]++;
+  }  
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  for(Int_t iter = 0; iter < nDir; iter++){
+    th1Canv_p[iter] = new superCanvas(nXPanel, nYPanel, th1CanvTot[iter][0][0], 1000, dirNames_p->at(iter));
+
+    th1Canv_p[iter]->SetGlobalMaxMin();
+    
+    th1Canv_p[iter]->canv_p->cd();
+    th1Canv_p[iter]->canv_p->Draw();
+
+    for(Int_t xIter = 0; xIter < nXPanel; xIter++){
+      for(Int_t yIter = 0; yIter < nYPanel; yIter++){
+	th1Canv_p[iter]->canv_p->cd();
+	th1Canv_p[iter]->pads_p[xIter][yIter]->Draw();
+	th1Canv_p[iter]->pads_p[xIter][yIter]->cd();
+      }
+    }
+  }
+
+  for(Int_t iter = 0; iter < nTH1; iter++){
+    std::string th1Name = th1Names_p->at(iter);
+    th1_p[iter] = (TH1F*)inFile_p->Get(th1Name.c_str());
+  }
+
+  if(doIncNorm){
+    for(Int_t iter = 0; iter < nTH1; iter++){
+      std::string th1Name = th1Names_p->at(iter);
+      if(th1Name.find("_Inc_") == std::string::npos) continue;
+      
+      Int_t dirPos = -1;
+      for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+	std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+	
+	if(debugMode) std::cout << __LINE__ << std::endl;
+	
+	if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+	
+	if(pos != std::string::npos){
+	  dirPos = dirIter;
+	  break;
+	}
+      }
+      
+      Int_t centPos = -1;
+      if(isPbPb){
+	for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+	  std::size_t pos = th1Name.find(centStrings[centIter]);
+	  if(pos != std::string::npos){
+	    centPos = centIter;
+	    break;
+	  }
+	}
+      }
+      else centPos = 0;
+      
+      for(Int_t iter2 = 0; iter2 < nTH1; iter2++){
+	if(iter == iter2) continue;
+	
+	Int_t dirPos2 = -1;
+	for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+	  std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+	  
+	  if(debugMode) std::cout << __LINE__ << std::endl;
+	  
+	  if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+	  
+	  if(pos != std::string::npos){
+	    dirPos2 = dirIter;
+	    break;
+	  }
+	}
+	
+	if(dirPos != dirPos2) continue;
+	
+	Int_t centPos2 = -1;
+	if(isPbPb){
+	  for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+	    std::size_t pos = th1Name.find(centStrings[centIter]);
+	    if(pos != std::string::npos){
+	      centPos2 = centIter;
+	      break;
+	    }
+	  }
+	}
+	else centPos2 = 0;
+	
+	if(centPos != centPos2) continue;
+	
+	th1_p[iter2]->Divide(th1_p[iter]);
+      }
+    }
+  }
+
+  for(Int_t iter = 0; iter < nTH1; iter++){
+    std::string th1Name = th1Names_p->at(iter);
+
+    if(doIncNorm && th1Name.find("_Inc_") != std::string::npos) continue;
+
+    if(doBinWidthNorm){
+      std::string newTitle = th1_p[iter]->GetYaxis()->GetTitle();
+      newTitle = "#frac{1.}{Bin Width} " + newTitle;
+      th1_p[iter]->GetYaxis()->SetTitle(newTitle.c_str());
+
+      for(Int_t binIter = 0; binIter < th1_p[iter]->GetNbinsX(); binIter++){
+	Double_t binWidth = th1_p[iter]->GetBinWidth(binIter+1);
+
+	th1_p[iter]->SetBinContent(binIter+1, th1_p[iter]->GetBinContent(binIter+1)/binWidth);
+	th1_p[iter]->SetBinError(binIter+1, th1_p[iter]->GetBinError(binIter+1)/binWidth);
+      }
+    }
+    else if(doIncNorm){
+      th1_p[iter]->GetYaxis()->SetTitle("Ratio #frac{Flavor}{Inclusive}");
+    }
+
+    th1_p[iter]->SetMarkerSize(0.5);
+
+    Int_t dirPos = -1;
+    for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+      std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
+      
+      if(debugMode) std::cout << __LINE__ << std::endl;
+
+      if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
+
+      if(pos != std::string::npos){
+        dirPos = dirIter;
+        break;
+      }
+    }
+
+    th1Canv_p[dirPos]->canv_p->cd();
+  
+    Int_t centPos = -1;
+    if(isPbPb){
+      for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+	std::size_t pos = th1Name.find(centStrings[centIter]);
+	if(pos != std::string::npos){
+	  centPos = centIter;
+	  break;
+	}
+      }
+    }
+    else centPos = 0;
+
+    std::string legStr = "Inc.";
+    if(th1Name.find("_Q_") != std::string::npos) legStr = "Quark";
+    else if(th1Name.find("_G_") != std::string::npos) legStr = "Gluon";
+    else if(th1Name.find("_Untagged_") != std::string::npos) legStr = "Untagged";
+
+    th1Canv_p[dirPos]->SetHist(th1_p[iter], centPos, 0, th1CanvCount[dirPos][centPos][0], legStr);
+    th1CanvCount[dirPos][centPos][0]++;
+  }
+
+
+  for(Int_t dirIter = 0; dirIter < nDir; dirIter++){
+    th1Canv_p[dirIter]->canv_p->cd();
+    th1Canv_p[dirIter]->MakeHistMaxMinNice();
+    th1Canv_p[dirIter]->SetHistMaxMin();
+
+    gStyle->SetOptStat(0);
+
+    th1Canv_p[dirIter]->SetPanelWhiteSpace();
+
+    if(debugMode) std::cout << __LINE__ << ", " << dirIter << std::endl;
+	  
+    for(Int_t iter = 0; iter < nXPanel; iter++){
+      for(Int_t iter2 = 0; iter2 < nYPanel; iter2++){
+	if(debugMode) std::cout << __LINE__ << ", " << dirIter << ", " << iter << ", " << iter2 << std::endl;
+
+	th1Canv_p[dirIter]->canv_p->cd();
+	th1Canv_p[dirIter]->pads_p[iter][iter2]->cd();
+
+	bool isDrawn = false;
+	
+	for(Int_t histIter = 0; histIter < th1CanvCount[dirIter][iter][iter2]; histIter++){
+	  if(debugMode) std::cout << __LINE__ << ", " << dirIter << ", " << iter << ", " << iter2 << ", " << histIter << std::endl;
+
+	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetMarkerSize(2);
+	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetMarkerStyle(20);	  
+
+	  std::string th1Name = th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->GetName();
+	  if(doIncNorm && th1Name.find("_Inc_") != std::string::npos) continue;
+
+	  Int_t col = kGray+1;
+	  if(th1Name.find("_Q_") != std::string::npos) col = kBlue;
+	  else if(th1Name.find("_G_") != std::string::npos) col = kRed;
+	  else if(th1Name.find("_Untagged_") != std::string::npos) col = kYellow+2;
+
+	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetMarkerColor(col);	  
+	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetFillColor(col);	  
+	  th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->SetLineColor(1);
+
+	 
+
+	  if(!isDrawn){
+	    isDrawn = true;
+	    th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->GetXaxis()->SetRange(1, th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->GetNbinsX());
+	    th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->DrawCopy("E1 P");
+	  }
+	  else th1Canv_p[dirIter]->hists_p[iter][iter2][histIter]->DrawCopy("SAME E1 P");
+	}
+
+	if(debugMode) std::cout << __LINE__ << std::endl;
+
+	if(iter == 0) th1Canv_p[dirIter]->DrawLabel1(iter, 0, dirNames_p->at(dirIter));
+	if(isPbPb) th1Canv_p[dirIter]->DrawLabel2(iter, 0, centStrings2[iter]);
+	else th1Canv_p[dirIter]->DrawLabel2(iter, 0, "PP");
+      }
+    }
+  }
+
+  std::string outName = inFileName;
+  const std::string inString = "_HIST.root";
+  const std::string outString = "_PLOT.root";
+  std::size_t strIndex = 0;
+
+  strIndex = outName.find(inString);
+  if(!(strIndex == std::string::npos)){
+    outName.replace(strIndex, inString.length(), outString);
+  }
+
+  std::string binWidthNorm = "";
+  if(doBinWidthNorm) binWidthNorm = "_BinWidthNorm";
+
+  std::string incNorm = "";
+  if(doIncNorm) incNorm = "_IncNorm";
+
+  TFile* outFile_p = new TFile(outName.c_str(), "UPDATE");
+  for(Int_t iter = 0; iter < nDir; iter++){
+
+    std::string pdfName =  Form("pdfDir/%s_%sQGDistrib%s%s_%s", dirNames_p->at(iter).c_str(), distribStartString.c_str(), binWidthNorm.c_str(), incNorm.c_str(), config.GetConfigFileNameNoExt().c_str());
+    
+    gStyle->SetOptStat(0);
+   
+    claverCanvasSaving(th1Canv_p[iter]->canv_p, pdfName.c_str(), "pdf");
+    TDatime* date = new TDatime();
+    pdfName = pdfName + "_" + std::to_string(date->GetDate()) + ".pdf";
+    delete date;
+    
+    pdfList_p->push_back(pdfName);
+  }
+
+  if(debugMode) std::cout << __LINE__ << std::endl;
+
+  outFile_p->Close();
+  delete outFile_p;
+
+  for(Int_t iter = 0; iter < nDir; iter++){
+    delete th1Canv_p[iter]->canv_p;
+    delete th1Canv_p[iter];
+  }
+
+  th1Names_p->clear();
+  delete th1Names_p;
+
+  dirNames_p->clear();
+  delete dirNames_p;
+
+  inFile_p->Close();
+  delete inFile_p;
+
+  return 0;
 }
 
 
@@ -156,7 +535,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 	    if(isResOverMean && name2.Index("ResOverMean") >= 0 && name2.Index("_Q_") >= 0) continue;
 	    if(isResOverMean && name2.Index("ResOverMean") >= 0 && name2.Index("_G_") >= 0) continue;
 
-	    if(isMean && name2.Index("Mean") >= 0 && name2.Index("_G_") >= 0) continue;
+	    //	    if(isMean && name2.Index("Mean") >= 0 && name2.Index("_G_") >= 0) continue;
 
 	    if(!strcmp("Fake", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
 	    if(!strcmp("Eff", inHistName[inHistNum].c_str()) && (name2.Index("_Q_") >= 0 || name2.Index("_G_") >= 0)) continue;
@@ -281,17 +660,7 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
       }
     }
-
-    //    th1Canv_p[iter] = new TCanvas(Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), Form("%s_%s%s%sc", dirNames_p->at(iter).c_str(), meanResStr[meanResNum].c_str(), inHistName[inHistNum].c_str(), ptEtaStr[ptEtaNum].c_str()), nXPanel*300, nYPanel*325);
-    //  th1Canv_p[iter]->Divide(nXPanel, nYPanel, 0.0, 0.0);
   }
-  /*
-  Bool_t isDrawn[nDir][nXPanel*nYPanel];
-  for(Int_t iter = 0; iter < nDir; iter++){
-    for(Int_t iter2 = 0; iter2 < nXPanel*nYPanel; iter2++){
-      isDrawn[iter][iter2] = false;
-    }
-    }*/
 
   if(debugMode) std::cout << __LINE__ << std::endl;
 
@@ -359,7 +728,6 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
 
     if(iter == 0) th1XMin = th1_p[iter]->GetBinLowEdge(xMinBin);
 
-    //insert new xmin
     th1XMin = th1_p[iter]->GetXaxis()->GetXmin();
     //    if(!strcmp("Eta", ptEtaStr2[ptEtaNum].c_str())) th1XMin += .1;
     th1_p[iter]->SetAxisRange(th1XMin, th1_p[iter]->GetXaxis()->GetXmax(), "X");
@@ -371,8 +739,6 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
       std::size_t pos = th1Name.find(dirNames_p->at(dirIter));
       
       if(debugMode) std::cout << __LINE__ << std::endl;
-
-      //std::cout << dirNames_p->at(dirIter) << ", " << th1Name << std::endl;
 
       if(th1Name.substr(0, th1Name.find("/")).size() != dirNames_p->at(dirIter).size()) continue;
 
@@ -502,7 +868,6 @@ int makeJECPlotMeanRes(const std::string inFileName, jecConfigParser config, con
   if(!(strIndex == std::string::npos)){
     outName.replace(strIndex, inString.length(), outString);
   }
-  //EDITING  
 
   TF1* csn_p = 0;
   TF1* csn2_p = 0;
@@ -1103,7 +1468,6 @@ int makeJECPlotMeanPts(const std::string inFileName, jecConfigParser config, con
   delete ptInts_p;
   delete ptDec_p;
 
-
   for(Int_t iter = 0; iter < nDir; iter++){
     for(Int_t centIter = 0; centIter < nCentBins2; centIter++){
       delete th1Canv_p[iter][centIter];
@@ -1229,7 +1593,34 @@ int makeTEXPlots(const std::string inFileName, std::string texFileName, std::vec
   }
 
   for(unsigned int iter = 0; iter < pdfList_p->size(); iter++){
-    if(pdfList_p->at(iter).find("EtaInc") == std::string::npos && pdfList_p->at(iter).find("PtInc") == std::string::npos) continue;
+    if(pdfList_p->at(iter).find("EtaInc") == std::string::npos && pdfList_p->at(iter).find("PtInc") == std::string::npos && pdfList_p->at(iter).find("QGDistrib") == std::string::npos) continue;
+
+    std::string placeHolderName = pdfList_p->at(iter);
+    while(placeHolderName.find("/") != std::string::npos){
+      placeHolderName.replace(0, placeHolderName.find("/")+1, "");
+    }
+    while(placeHolderName.find(".") != std::string::npos){
+      placeHolderName.replace(placeHolderName.find("."), placeHolderName.size() - placeHolderName.find("."), "");
+    }
+
+    int charIter = 0;
+    while(charIter < (int)placeHolderName.size()){
+      if(placeHolderName.substr(charIter, 1).find("_") != std::string::npos){
+	if(charIter == 0) placeHolderName.replace(charIter, 1, "\\_");
+	else if(placeHolderName.substr(charIter-1, 1).find("\\") == std::string::npos) placeHolderName.replace(charIter, 1, "\\_");
+	else charIter++;
+      }
+      else charIter++;
+    }
+
+    charIter = placeHolderName.size()-1;
+    while(charIter >= 0){
+      if(placeHolderName.substr(charIter, 1).find("_") != std::string::npos){
+	placeHolderName.replace(charIter-1, placeHolderName.size()-(charIter-1), "");
+	break;
+      }
+      else charIter--;
+    }
 
     texFile << "\\begin{frame}" << std::endl;
     texFile << "\\frametitle{\\centerline{Placeholder}}" << std::endl;
@@ -1237,7 +1628,8 @@ int makeTEXPlots(const std::string inFileName, std::string texFileName, std::vec
     texFile << "\\includegraphics[width=.6\\textwidth]{" << pdfList_p->at(iter) << "}" << std::endl;
     texFile << "\\end{center}" << std::endl;
     texFile << "\\begin{itemize}" << std::endl;
-    texFile << "\\item{Placeholder}" << std::endl;
+    texFile << "\\fontsize{8}{8}\\selectfont" << std::endl;
+    texFile << "\\item{" << placeHolderName << "}" << std::endl;
     texFile << "\\end{itemize}" << std::endl;
     texFile << "\\end{frame}" << std::endl;
 
@@ -1375,6 +1767,11 @@ int makeJECPlot(const std::string inFileName, const bool produceTeX)
 
   int retVal = 0;
 
+  retVal += makeJECPlotBasicQGDistrib(inFileName, config, "jtPt", false, false, pdfList_p);
+  retVal += makeJECPlotBasicQGDistrib(inFileName, config, "jtPt", false, true, pdfList_p);
+  retVal += makeJECPlotBasicQGDistrib(inFileName, config, "jtPt", true, false, pdfList_p);
+
+
   for(Int_t iter = 0; iter < nHistName; iter++){
     for(Int_t ptEtaIter = 0; ptEtaIter < nJtPtEtaBins+1; ptEtaIter++){
       for(Int_t iter2 = 0; iter2 < nMeanRes; iter2++){
@@ -1390,7 +1787,7 @@ int makeJECPlot(const std::string inFileName, const bool produceTeX)
       if(iter == 0){
 	for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	  if(debugMode) std::cout << __LINE__ << std::endl;
-	  if(qgIter == 0) retVal += makeJECPlotMeanPts(inFileName, config, iter, jtPtEtaBinStrings[ptEtaIter], qgIter, pdfList_p);
+	  makeJECPlotMeanPts(inFileName, config, iter, jtPtEtaBinStrings[ptEtaIter], qgIter, pdfList_p);
 	}
       }
     }

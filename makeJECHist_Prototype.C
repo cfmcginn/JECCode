@@ -428,6 +428,11 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
     recoPhoPt_Weighted_h[centIter]->Sumw2();
   }
 
+  TH1F* jtPt_Inc_p[nJetAlgo][nCentBins];
+  TH1F* jtPt_Q_p[nJetAlgo][nCentBins];
+  TH1F* jtPt_G_p[nJetAlgo][nCentBins];
+  TH1F* jtPt_Untagged_p[nJetAlgo][nCentBins];
+
   TH1F* genJtPtPerPthat_p[nJetAlgo][nCentBins][nQG][nPtHats];
   TH2F* jtRecoVGen_p[nJetAlgo][nCentBins][nQG];
   TH2F* jtRecoOverGenVPt_p[nJetAlgo][nCentBins][nQG];
@@ -461,7 +466,18 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
       std::string centStr = "PP";
       if(config.GetIsPbPb()) centStr = "Cent" + std::to_string(config.GetCentBinFromPos(centIter)) + "to" + std::to_string(config.GetCentBinFromPos(centIter+1));
+      
+      jtPt_Inc_p[iter][centIter] = new TH1F(Form("jtPt_Inc_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T} (Inc.);Events (Weighted)"), nJtPtBins, jtPtBins);
+      jtPt_Inc_p[iter][centIter]->Sumw2();
 
+      jtPt_Q_p[iter][centIter] = new TH1F(Form("jtPt_Q_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T} (Q);Events (Weighted)"), nJtPtBins, jtPtBins);
+      jtPt_Q_p[iter][centIter]->Sumw2();
+
+      jtPt_G_p[iter][centIter]  = new TH1F(Form("jtPt_G_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T} (G);Events (Weighted)"), nJtPtBins, jtPtBins);
+      jtPt_G_p[iter][centIter]->Sumw2();
+
+      jtPt_Untagged_p[iter][centIter] = new TH1F(Form("jtPt_Untagged_%s_%s_h", jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T} (Untagged);Events (Weighted)"), nJtPtBins, jtPtBins);
+      jtPt_Untagged_p[iter][centIter]->Sumw2();
 
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	jtRecoVGen_p[iter][centIter][qgIter] = new TH2F(Form("jtRecoVGen_%s_%s_%s_h", qg[qgIter].c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";Gen. Jet p_{T}; Reco. %s Jet p_{T}", jetAlgo.at(iter).c_str()), nJtPtBins, jtPtBins, nJtPtBins, jtPtBins);
@@ -502,7 +518,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    std::string ptStrTitle = config.FloatRangeToTitleString(jtPtBins[jtIter], jtPtBins[jtIter+1]);
 	    std::string ptStrLabel = config.FloatRangeToLabelString(jtPtBins[jtIter], jtPtBins[jtIter+1], "p_{T,Gen.}");
 
-	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][ptEtaIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_MeanResPts_Pt%s_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), ptStrTitle.c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo.at(iter).c_str(), ptStrLabel.c_str()), 60, 0, 2);
+	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][ptEtaIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVPt_%s_%s_MeanResPts_Pt%s_%s_%s_h", ptEtaStr.c_str(), qg[qgIter].c_str(), ptStrTitle.c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo.at(iter).c_str(), ptStrLabel.c_str()), 80, 0, 2);
 	    jtRecoOverGenVPt_MeanResPts_p[iter][centIter][ptEtaIter][qgIter][jtIter]->Sumw2();
 	    
 	    jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][ptEtaIter][qgIter][jtIter] = 0;
@@ -526,8 +542,6 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	}
       }
 
-      //editing here
-
       for(Int_t etaPtIter = 0; etaPtIter < nJtEtaPtBins+1; etaPtIter++){
 	std::string etaPtStr = "PtInc";
         if(etaPtIter > 0) etaPtStr = "Pt" + config.FloatRangeToTitleString(jtEtaPtBins[etaPtIter-1], jtEtaPtBins[etaPtIter]);
@@ -545,7 +559,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    std::string etaStrTitle = config.FloatRangeToTitleString(jtEtaBins[jtIter], jtEtaBins[jtIter+1]);
 	    std::string etaStrLabel = config.FloatRangeToLabelString(jtEtaBins[jtIter], jtEtaBins[jtIter+1], "#eta_{Gen.}");
 
-	    jtRecoOverGenVEta_MeanResPts_p[iter][centIter][etaPtIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%s_MeanResPts_Eta%s_%s_%s_h", etaPtStr.c_str(), qg[qgIter].c_str(), etaStrTitle.c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo.at(iter).c_str(), etaStrLabel.c_str()), 60, 0, 2);
+	    jtRecoOverGenVEta_MeanResPts_p[iter][centIter][etaPtIter][qgIter][jtIter] = new TH1F(Form("jtRecoOverGenVEta_%s_%s_MeanResPts_Eta%s_%s_%s_h", etaPtStr.c_str(), qg[qgIter].c_str(), etaStrTitle.c_str(), jetAlgo.at(iter).c_str(), centStr.c_str()), Form(";(Reco. %s Jet p_{T})/(Gen. Jet p_{T});Events (%s)", jetAlgo.at(iter).c_str(), etaStrLabel.c_str()), 80, 0, 2);
 	    jtRecoOverGenVEta_MeanResPts_p[iter][centIter][etaPtIter][qgIter][jtIter]->Sumw2();
 	    
 	    jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][etaPtIter][qgIter][jtIter]++;
@@ -856,19 +870,21 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
       }
             
 
-      if(config.GetIsPbPb()){
-	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
-	  for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
-	    jtPt_[algoIter][jtIter] *= getPtEtaJetResidualCorr(jtPt_[algoIter][jtIter], jtEta_[algoIter][jtIter], hiBin_/2.);
+      if(config.GetDoCorrections()){
+	if(config.GetIsPbPb()){
+	  for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+	    for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
+	      jtPt_[algoIter][jtIter] *= getPtEtaJetResidualCorr(jtPt_[algoIter][jtIter], jtEta_[algoIter][jtIter], hiBin_/2.);
+	    }
+	  }
+	}     
+	else{
+	  for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+	    for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
+	      jtPt_[algoIter][jtIter] *= .99;
+	    }
 	  }
 	}
-      }     
-      else{
-	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
-          for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
-            jtPt_[algoIter][jtIter] *= .99;
-          }
-        }
       }
       /*
       else{
@@ -965,11 +981,20 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    }
 	  }
 	       
-
+	
 	  Int_t qgPos[2] = {0, -1};
 	  if(TMath::Abs(refPartFlav_[algoIter][jtIter]) < 9) qgPos[1] = 1;
 	  else if(TMath::Abs(refPartFlav_[algoIter][jtIter]) == 21) qgPos[1] = 2;	
   
+	  jtPt_Inc_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], hiBinWeight*truncPtHatWeight);
+	  if(qgPos[1] == 1) jtPt_Q_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], hiBinWeight*truncPtHatWeight);
+	  else if(qgPos[1] == 2) jtPt_G_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], hiBinWeight*truncPtHatWeight);
+	  else if(qgPos[1] == -1) jtPt_Untagged_p[algoIter][centPos]->Fill(refPt_[algoIter][jtIter], hiBinWeight*truncPtHatWeight);
+
+
+	  if(!config.GetKeepFlavorlessJets() && qgPos[1] == -1) continue;
+	  if(config.GetSetFlavorlessJetsAsGluon() && qgPos[1] == -1) qgPos[1] = 2;
+	
 	  Int_t etaPos[2] = {0, config.GetJtPtEtaBinPos(refEta_[algoIter][jtIter])};
 	  /*
 	  for(Int_t jtPtEtaIter = 0; jtPtEtaIter < nJtPtEtaBins; jtPtEtaIter++){
@@ -996,7 +1021,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
 	  Float_t qgWeight = 1;
 
-	  if(config.GetIsDijet()){
+	  if(config.GetDoQGReweight()){
 	    if(qgPos[1] == 1){
 	      if(refPt_[algoIter][jtIter] < 300) qgWeight *= qRatio_p->GetBinContent(qRatio_p->FindBin(refPt_[algoIter][jtIter]));
 	      else qgWeight *= qRatio_p->GetBinContent(qRatio_p->GetNbinsX());
@@ -1143,7 +1168,9 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    tempRes[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDev();
 	    tempResErr[0] = jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetStdDevError();
 	    
-	    //	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
+	    if(jtRecoOverGenVPt_MeanResPts_COUNTS[iter][centIter][jtPtEtaIter][qgIter][jtIter] < 300. || jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
+
+	    if(qgIter == 2) jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter]->Rebin(2);
 
 	    FitGauss(jtRecoOverGenVPt_MeanResPts_p[iter][centIter][jtPtEtaIter][qgIter][jtIter], tempMean[1], tempMeanErr[1], tempRes[1], tempResErr[1], true, config.GetFitAcceptProbability(), config.GetDoIterativeFit(), config.GetFitIterations(), config.GetFitIterationInterval());
 	    
@@ -1208,7 +1235,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	    
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    
-	    //	    if(jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][jtEtaPtIter][qgIter][jtIter] < 300. || jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->Rebin(2);
+	    if(jtRecoOverGenVEta_MeanResPts_COUNTS[iter][centIter][jtEtaPtIter][qgIter][jtIter] < 300. || jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->GetMaximum() < 200) jtRecoOverGenVEta_MeanResPts_p[iter][centIter][jtEtaPtIter][qgIter][jtIter]->Rebin(2);
 
 	    if(debugMode) std::cout << __LINE__ << std::endl;
 	    
@@ -1339,6 +1366,11 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
     if(debugMode) std::cout << __LINE__ << std::endl;
 
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+      jtPt_Inc_p[iter][centIter]->Write("", TObject::kOverwrite);
+      jtPt_Q_p[iter][centIter]->Write("", TObject::kOverwrite);
+      jtPt_G_p[iter][centIter]->Write("", TObject::kOverwrite);
+      jtPt_Untagged_p[iter][centIter]->Write("", TObject::kOverwrite);
+
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	jtRecoVGen_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
 	jtRecoOverGenVPt_p[iter][centIter][qgIter]->Write("", TObject::kOverwrite);
@@ -1424,6 +1456,11 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 
   for(Int_t iter = 0; iter < nJetAlgo; iter++){
     for(Int_t centIter = 0; centIter < nCentBins; centIter++){
+      delete jtPt_Inc_p[iter][centIter];
+      delete jtPt_Q_p[iter][centIter];
+      delete jtPt_G_p[iter][centIter];
+      delete jtPt_Untagged_p[iter][centIter];
+
       for(Int_t qgIter = 0; qgIter < nQG; qgIter++){
 	delete jtRecoVGen_p[iter][centIter][qgIter];
 	delete jtRecoOverGenVPt_p[iter][centIter][qgIter];
