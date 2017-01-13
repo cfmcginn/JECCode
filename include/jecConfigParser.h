@@ -41,7 +41,7 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 73;
+  const static unsigned int nValidConfigVals = 76;
   enum configIter {EVENTTYPE, //0
 		   OUTNAME, //1
 		   NPTHAT, //2
@@ -114,7 +114,10 @@ class jecConfigParser{
 		   DOZJTDPHICUT, //69
 		   ZJTDPHICUT, //70
 		   DOGENGAMMACUTOVERRIDE, //71
-		   GENGAMMACUT}; //72
+		   GENGAMMACUT, //72
+		   PLOTQUARK, //73
+		   PLOTGLUON, //74
+		   PLOTUNTAGGED}; //75
  
   const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
 							 "OUTNAME", //1
@@ -188,7 +191,10 @@ class jecConfigParser{
 		       					 "DOZJTDPHICUT", //69
 							 "ZJTDPHICUT", //70
 							 "DOGENGAMMACUTOVERRIDE", //71
-							 "GENGAMMACUT"}; //72
+							 "GENGAMMACUT", //72
+							 "PLOTQUARK", //73
+							 "PLOTGLUON", //74
+							 "PLOTUNTAGGED"}; //75
 
 
   const std::string configTypes[nValidConfigVals] = {"std::string", //0
@@ -263,7 +269,10 @@ class jecConfigParser{
 						     "bool", //69
 						     "unsigned float", //70
 						     "bool", //71
-						     "unsigned float"}; //72
+						     "unsigned float", //72
+						     "bool", //73
+						     "bool", //74
+						     "bool"}; //75
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
 							     "", //1
@@ -337,7 +346,10 @@ class jecConfigParser{
 							     "FALSE", //69
 							     "7./8.*PI", //70
 							     "FALSE", //71
-							     "15"}; //72
+							     "15", //72
+							     "FALSE", //73
+							     "FALSE", //74
+							     "FALSE"}; //75
 
   unsigned int nConfigInputs[nValidConfigVals] = {0, //0
 						  0, //1
@@ -411,7 +423,10 @@ class jecConfigParser{
 						  0, //69
 						  0, //70
 						  0, //71
-						  0}; //72  
+						  0, //72
+						  0, //73
+						  0, //74
+						  0}; //75  
 
 
   std::string configInputs[nValidConfigVals] = {"", //0
@@ -486,7 +501,10 @@ class jecConfigParser{
 						"", //69
 						"", //70
 						"", //71
-						""}; //72
+						"", //72
+						"", //73
+						"", //74
+						""}; //75
 
   std::string configFileName = "";
   std::string eventTypeStr = "";
@@ -590,6 +608,10 @@ class jecConfigParser{
 
   bool doGenGammaCutOverride = false;
   float genGammaCut = 15.;
+
+  bool plotQuark = false;
+  bool plotGluon = false;
+  bool plotUntagged = false;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -712,6 +734,12 @@ class jecConfigParser{
   float GetZJtDPhiCut();
   bool GetDoGenGammaCutOverride();
   float GetGenGammaCut();
+  bool GetPlotQuark();
+  bool GetPlotGluon();
+  bool GetPlotUntagged();
+  void SetPlotQuark(const bool);
+  void SetPlotGluon(const bool);
+  void SetPlotUntagged(const bool);
 
   void WriteConfigParamsToRootFile(TFile*);
 };
@@ -1801,6 +1829,27 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[GENGAMMACUT].size()).find(validConfigVals[GENGAMMACUT]) != std::string::npos){
       if(!ProcessUFloat(valStr, genGammaCut, GENGAMMACUT)) continue;
     }
+
+    if(tempStr.substr(0, validConfigVals[PLOTQUARK].size()).find(validConfigVals[PLOTQUARK]) != std::string::npos){
+      if(!ProcessBool(valStr, plotQuark, PLOTQUARK)){
+        plotQuark = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[PLOTGLUON].size()).find(validConfigVals[PLOTGLUON]) != std::string::npos){
+      if(!ProcessBool(valStr, plotGluon, PLOTGLUON)){
+        plotGluon = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[PLOTUNTAGGED].size()).find(validConfigVals[PLOTUNTAGGED]) != std::string::npos){
+      if(!ProcessBool(valStr, plotUntagged, PLOTUNTAGGED)){
+        plotUntagged = false;
+        continue;
+      }
+    }
   }
 
   std::cout << std::endl;
@@ -2553,6 +2602,9 @@ void jecConfigParser::ResetConfigParser()
   zJtDPhiCut = 7.*TMath::Pi()/8.; //70
   doGenGammaCutOverride = false; //71
   genGammaCut = 15.; //72
+  plotQuark = false; //73
+  plotGluon = false; //74
+  plotUntagged = false; //75
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -3179,6 +3231,14 @@ float jecConfigParser::GetZJtDPhiCut(){return zJtDPhiCut;}
 
 bool jecConfigParser::GetDoGenGammaCutOverride(){return doGenGammaCutOverride;}
 float jecConfigParser::GetGenGammaCut(){return genGammaCut;}
+
+bool jecConfigParser::GetPlotQuark(){return plotQuark;}
+bool jecConfigParser::GetPlotGluon(){return plotGluon;}
+bool jecConfigParser::GetPlotUntagged(){return plotUntagged;}
+
+void jecConfigParser::SetPlotQuark(const bool newPlotQuarkVal = true){plotQuark = newPlotQuarkVal;}
+void jecConfigParser::SetPlotGluon(const bool newPlotGluonVal = true){plotGluon = newPlotGluonVal;}
+void jecConfigParser::SetPlotUntagged(const bool newPlotUntaggedVal = true){plotUntagged = newPlotUntaggedVal;}
 
 void jecConfigParser::WriteConfigParamsToRootFile(TFile* writeFile_p)
 {

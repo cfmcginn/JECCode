@@ -226,8 +226,7 @@ void FitGauss(TH1F* hist_p, Float_t& mean, Float_t& meanErr, Float_t& res, Float
 
 int makeJECHist_Prototype(const std::string inConfigFileName)
 {
-  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBia\
-s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
+  TFile* ratioFile_p = new TFile("outputDir/merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ");
   TH1F* qRatio_p = (TH1F*)ratioFile_p->Get("qRatioZOverDijet_h");
   TH1F* gRatio_p = (TH1F*)ratioFile_p->Get("gRatioZOverDijet_h");
 
@@ -235,7 +234,7 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
   jecConfigParser config;
   if(!config.SetConfigParser(inConfigFileName)) return 1;
 
-  if(config.GetDoCorrections()) initPtEtaJetResidualCorr(config.GetCorrFileName());
+  if(config.GetDoCorrections()) initPtEtaJetResidualCorr(config.GetCorrFileName(), config.GetCorrForm());
   /*
   Bool_t initCorrSuccess = false;
   if(config.GetDoCorrections()) initCorrSuccess = initGetResidualJetCorr("merged_dgulhan-Pythia8_Dijet30_pp_TuneCUETP8M1_Hydjet_MinBias_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_pthat_30_RESIDUALCORR.root");
@@ -916,15 +915,9 @@ s_5020GeV_RECODEBUG_758_PrivMC_forest_v28_0_20160512_QGFRACTIONHIST.root", "READ
 	      jtPt_[algoIter][jtIter] *= getPtEtaJetResidualCorr(jtPt_[algoIter][jtIter], jtEta_[algoIter][jtIter], hiBin_/2., config.GetCorrForm());
 	    }
 	  }
-	}     
-	else{
-	  for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
-	    for(Int_t jtIter = 0; jtIter < nJt_[algoIter]; jtIter++){
-	      jtPt_[algoIter][jtIter] *= .99;
-	    }
-	  }
 	}
       }
+
       /*
       else{
 	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
