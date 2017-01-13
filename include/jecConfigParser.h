@@ -41,7 +41,7 @@ class jecConfigParser{
   const std::string validFalse[nValidTrueFalse] = {"false", "0"};
 
 
-  const static unsigned int nValidConfigVals = 69;
+  const static unsigned int nValidConfigVals = 73;
   enum configIter {EVENTTYPE, //0
 		   OUTNAME, //1
 		   NPTHAT, //2
@@ -86,31 +86,35 @@ class jecConfigParser{
 		   DOQGREWEIGHT, //41
 		   QGREWEIGHTFILENAME, //42
 		   DOCORRECTIONS, //43
-		   NCENTBINS, //44
-		   CENTBINS, //45
-		   MINGAMMAPT, //46
-		   MAXGAMMAPT, //47
-		   MINGAMMAETA, //48
-		   MAXGAMMAETA, //49
-		   GAMMAPTHATSTAGGER, //50
-		   DOGAMMAJTDPHICUT, // 51
-		   GAMMAJTDPHICUT, //52
-		   MINLEPTONPT, //53
-		   MINLEPTONETA, //54
-		   MAXLEPTONETA, //55
-		   DOLEPTONFLAVORCUTS, //56
-		   MINELECTRONPT, //57
-		   MINELECTRONETA, //58
-		   MAXELECTRONETA, //59
-		   MINMUONPT, //60
-		   MINMUONETA, //61
-		   MAXMUONETA, //62
-		   MINZPT, //63
-		   MAXZPT, //64
-		   MINZM, //65
-		   MAXZM, //66
-		   DOZJTDPHICUT, //67
-		   ZJTDPHICUT}; //68
+		   CORRFILENAME, //44
+		   CORRFORM, //45
+		   NCENTBINS, //46
+		   CENTBINS, //47
+		   MINGAMMAPT, //48
+		   MAXGAMMAPT, //49
+		   MINGAMMAETA, //50
+		   MAXGAMMAETA, //51
+		   GAMMAPTHATSTAGGER, //52
+		   DOGAMMAJTDPHICUT, // 53
+		   GAMMAJTDPHICUT, //54
+		   MINLEPTONPT, //55
+		   MINLEPTONETA, //56
+		   MAXLEPTONETA, //57
+		   DOLEPTONFLAVORCUTS, //58
+		   MINELECTRONPT, //59
+		   MINELECTRONETA, //60
+		   MAXELECTRONETA, //61
+		   MINMUONPT, //62
+		   MINMUONETA, //63
+		   MAXMUONETA, //64
+		   MINZPT, //65
+		   MAXZPT, //66
+		   MINZM, //67
+		   MAXZM, //68
+		   DOZJTDPHICUT, //69
+		   ZJTDPHICUT, //70
+		   DOGENGAMMACUTOVERRIDE, //71
+		   GENGAMMACUT}; //72
  
   const std::string validConfigVals[nValidConfigVals] = {"EVENTTYPE", //0
 							 "OUTNAME", //1
@@ -156,31 +160,35 @@ class jecConfigParser{
 							 "DOQGREWEIGHT", //41
 							 "QGREWEIGHTFILENAME", //42
 							 "DOCORRECTIONS", //43
-							 "NCENTBINS", //44
-							 "CENTBINS", //45
-							 "MINGAMMAPT", //46
-							 "MAXGAMMAPT", //47
-							 "MINGAMMAETA", //48
-							 "MAXGAMMAETA", //49
-							 "GAMMAPTHATSTAGGER", //50
-							 "DOGAMMAJTDPHICUT", //51
-							 "GAMMAJTDPHICUT", //52
-							 "MINLEPTONPT", //53
-							 "MINLEPTONETA", //54
-							 "MAXLEPTONETA", //55
-							 "DOLEPTONFLAVORCUTS", //56
-							 "MINELECTRONPT", //57
-							 "MINELECTRONETA", //58
-							 "MAXELECTRONETA", //59
-							 "MINMUONPT", //60
-							 "MINMUONETA", //61
-							 "MAXMUONETA", //62
-							 "MINZPT", //63
-							 "MAXZPT", //64
-							 "MINZM", //65
-							 "MAXZM", //66
-		       					 "DOZJTDPHICUT", //67
-							 "ZJTDPHICUT"}; //68
+							 "CORRFILENAME", //44
+							 "CORRFORM", //45
+							 "NCENTBINS", //46
+							 "CENTBINS", //47
+							 "MINGAMMAPT", //48
+							 "MAXGAMMAPT", //49
+							 "MINGAMMAETA", //50
+							 "MAXGAMMAETA", //51
+							 "GAMMAPTHATSTAGGER", //52
+							 "DOGAMMAJTDPHICUT", //53
+							 "GAMMAJTDPHICUT", //54
+							 "MINLEPTONPT", //55
+							 "MINLEPTONETA", //56
+							 "MAXLEPTONETA", //57
+							 "DOLEPTONFLAVORCUTS", //58
+							 "MINELECTRONPT", //59
+							 "MINELECTRONETA", //60
+							 "MAXELECTRONETA", //61
+							 "MINMUONPT", //62
+							 "MINMUONETA", //63
+							 "MAXMUONETA", //64
+							 "MINZPT", //65
+							 "MAXZPT", //66
+							 "MINZM", //67
+							 "MAXZM", //68
+		       					 "DOZJTDPHICUT", //69
+							 "ZJTDPHICUT", //70
+							 "DOGENGAMMACUTOVERRIDE", //71
+							 "GENGAMMACUT"}; //72
 
 
   const std::string configTypes[nValidConfigVals] = {"std::string", //0
@@ -227,31 +235,35 @@ class jecConfigParser{
 						     "bool", //41
 						     "std::string", //42
 						     "bool", //43
-						     "unsgined int", //44
-						     "std::vector<unsigned int>", //45
-						     "unsigned float", //46
-						     "unsigned float", //47
-						     "float", //48
-						     "float", //49
-						     "unsigned float", //50
-						     "bool", //51
+						     "std::string", //44
+						     "std::string", //45
+						     "unsgined int", //46
+						     "std::vector<unsigned int>", //47
+						     "unsigned float", //48
+						     "unsigned float", //49
+						     "float", //50
+						     "float", //51
 						     "unsigned float", //52
-						     "unsigned float", //53
-						     "float", //54
-						     "float", //55
-						     "bool", //56
-						     "unsigned float", //57
-						     "float", //58
-						     "float", //59
-						     "unsigned float", //60
+						     "bool", //53
+						     "unsigned float", //54
+						     "unsigned float", //55
+						     "float", //56
+						     "float", //57
+						     "bool", //58
+						     "unsigned float", //59
+						     "float", //60
 						     "float", //61
-						     "float", //62
-						     "unsigned float", //63
-						     "unsigned float", //64
+						     "unsigned float", //62
+						     "float", //63
+						     "float", //64
 						     "unsigned float", //65
 						     "unsigned float", //66
-						     "bool", //67
-						     "unsigned float"}; //68
+						     "unsigned float", //67
+						     "unsigned float", //68
+						     "bool", //69
+						     "unsigned float", //70
+						     "bool", //71
+						     "unsigned float"}; //72
 
   const std::string defaultConfigInputs[nValidConfigVals] = {"", //0
 							     "", //1
@@ -297,31 +309,35 @@ class jecConfigParser{
 							     "FALSE", //41
 							     "", //42
 							     "FALSE", //43
-							     "2", //44
-							     "100,30,0", //45
-							     "40.", //46
-							     "10000.", //47
-							     "-1.44", //48
-							     "1.44", //49
-							     "0.", //50
-							     "FALSE", //51
-							     "7./8.*PI", //52
-							     "15", //53
-							     "-1.44", //54
-							     "1.44", //55
-							     "FALSE", //56
-							     "15", //57
-							     "-1.44", //58
-							     "1.44", //59
-							     "10", //60
-							     "-2.5", //61
-							     "2.5", //62
-							     "20", //63
-							     "10000", //64
-							     "50", //65
-							     "130", //66
-							     "FALSE", //67
-							     "7./8.*PI"}; //68
+							     "", //44
+							     "", //45
+							     "2", //46
+							     "100,30,0", //47
+							     "40.", //48
+							     "10000.", //49
+							     "-1.44", //50
+							     "1.44", //51
+							     "0.", //52
+							     "FALSE", //53
+							     "7./8.*PI", //54
+							     "15", //55
+							     "-1.44", //56
+							     "1.44", //57
+							     "FALSE", //58
+							     "15", //59
+							     "-1.44", //60
+							     "1.44", //61
+							     "10", //62
+							     "-2.5", //63
+							     "2.5", //64
+							     "20", //65
+							     "10000", //66
+							     "50", //67
+							     "130", //68
+							     "FALSE", //69
+							     "7./8.*PI", //70
+							     "FALSE", //71
+							     "15"}; //72
 
   unsigned int nConfigInputs[nValidConfigVals] = {0, //0
 						  0, //1
@@ -391,8 +407,12 @@ class jecConfigParser{
 						  0, //65
 						  0, //66
 						  0, //67
-						  0}; //68
-  
+						  0, //68
+						  0, //69
+						  0, //70
+						  0, //71
+						  0}; //72  
+
 
   std::string configInputs[nValidConfigVals] = {"", //0
 						"", //1
@@ -462,7 +482,11 @@ class jecConfigParser{
 						"", //65
 						"", //66
 						"", //67
-						""}; //68
+						"", //68
+						"", //69
+						"", //70
+						"", //71
+						""}; //72
 
   std::string configFileName = "";
   std::string eventTypeStr = "";
@@ -528,6 +552,8 @@ class jecConfigParser{
   std::string qgReweightFileName = "";
 
   bool doCorrections = false;
+  std::string corrFileName = "";
+  std::string corrForm = "";
 
   unsigned int nCentBins = 2;
   std::vector<unsigned int> centBins = {100, 30, 0};
@@ -561,6 +587,9 @@ class jecConfigParser{
   float maxZM = 130.;
   bool doZJtDPhiCut = false;
   float zJtDPhiCut = 7.*TMath::Pi()/8.;
+
+  bool doGenGammaCutOverride = false;
+  float genGammaCut = 15.;
 
   std::string returnLowerStr(std::string);
   bool isTrueFalseStr(std::string);
@@ -643,6 +672,8 @@ class jecConfigParser{
   bool GetDoQGReweight();
   std::string GetQGReweightFileName();
   bool GetDoCorrections();
+  std::string GetCorrFileName();
+  std::string GetCorrForm();
   bool KeepEventGamma(const float, const float);
   bool KeepEventLeptons(const float, const float, const float, const float, const int);
   bool KeepEventZ(const float, const float);
@@ -679,7 +710,8 @@ class jecConfigParser{
   float GetMaxZM();
   bool GetDoZJtDPhiCut();
   float GetZJtDPhiCut();
-
+  bool GetDoGenGammaCutOverride();
+  float GetGenGammaCut();
 
   void WriteConfigParamsToRootFile(TFile*);
 };
@@ -1164,10 +1196,12 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[EVENTTYPE].size()).find(validConfigVals[EVENTTYPE]) != std::string::npos){
       eventTypeStr = valStr;
       configInputs[EVENTTYPE] = eventTypeStr;
+      nConfigInputs[EVENTTYPE]++;
     }
 
     if(tempStr.substr(0, validConfigVals[OUTNAME].size()).find(validConfigVals[OUTNAME]) != std::string::npos){
       outNameStr = valStr;
+      nConfigInputs[OUTNAME]++;
     }
 
     if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
@@ -1608,6 +1642,18 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
       }
     }
 
+    if(tempStr.substr(0, validConfigVals[CORRFILENAME].size()).find(validConfigVals[CORRFILENAME]) != std::string::npos){
+      corrFileName = valStr;
+      configInputs[CORRFILENAME] = corrFileName;
+      nConfigInputs[CORRFILENAME]++;
+    }
+
+    if(tempStr.substr(0, validConfigVals[CORRFORM].size()).find(validConfigVals[CORRFORM]) != std::string::npos){
+      corrForm = valStr;
+      configInputs[CORRFORM] = corrForm;
+      nConfigInputs[CORRFORM]++;
+    }
+
     if(tempStr.substr(0, validConfigVals[NCENTBINS].size()).find(validConfigVals[NCENTBINS]) != std::string::npos){
       if(!ProcessUInt(valStr, nCentBins, NCENTBINS)) continue;
     }
@@ -1743,7 +1789,27 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
     if(tempStr.substr(0, validConfigVals[ZJTDPHICUT].size()).find(validConfigVals[ZJTDPHICUT]) != std::string::npos){
       if(!ProcessUFloat(valStr, zJtDPhiCut, ZJTDPHICUT)) continue;
     }
+
+
+    if(tempStr.substr(0, validConfigVals[DOGENGAMMACUTOVERRIDE].size()).find(validConfigVals[DOGENGAMMACUTOVERRIDE]) != std::string::npos){
+      if(!ProcessBool(valStr, doGenGammaCutOverride, DOGENGAMMACUTOVERRIDE)){
+        doGenGammaCutOverride = false;
+        continue;
+      }
+    }
+
+    if(tempStr.substr(0, validConfigVals[GENGAMMACUT].size()).find(validConfigVals[GENGAMMACUT]) != std::string::npos){
+      if(!ProcessUFloat(valStr, genGammaCut, GENGAMMACUT)) continue;
+    }
   }
+
+  std::cout << std::endl;
+
+  for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
+    if(nConfigInputs[iter] == 0) std::cout << "Value \'" << validConfigVals[iter] << "\' was not given. Switch to default \'" << defaultConfigInputs[iter] << "\'." << std::endl;
+  }
+
+  std::cout << std::endl;
 
   if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 
@@ -2292,6 +2358,18 @@ bool jecConfigParser::SetConfigParser(const std::string inConfigFile)
   
   if(doGlobalDebug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 
+  if(doCorrections && !checkFile(corrFileName)){
+    std::cout << "DOCORRECTIONS but CORRFILENAME \'" << corrFileName << "\' is not a valid file. Return false." << std::endl;
+    ResetConfigParser();
+    return false;
+  }
+
+  if(doCorrections && corrForm.size() == 0){
+    std::cout << "DOCORRECTIONS but CORRFORM \'" << corrForm << "\' is not a valid correction. Return false." << std::endl;
+    ResetConfigParser();
+    return false;
+  }
+
   if(0 == nCentBins && isPbPb){
     std::cout << "NCENTBINS, \'" << nCentBins << "\', is not a valid value. Return false." << std::endl;
 
@@ -2443,34 +2521,38 @@ void jecConfigParser::ResetConfigParser()
   doQGReweight = false; //41
   qgReweightFileName = ""; //42
   doCorrections = false; //43
-  nCentBins = 2; //44
-  centBins.clear(); //45
+  corrFileName = ""; //44
+  corrForm = ""; //45
+  nCentBins = 2; //46
+  centBins.clear(); //47
   centBins.push_back(100);
   centBins.push_back(30);
   centBins.push_back(0);
-  minGammaPt = 40.; //46
-  maxGammaPt = 10000.; //47
-  minGammaEta = -1.44; //48
-  maxGammaEta = 1.44; //49
-  gammaPtHatStagger = 0.; //50
-  doGammaJtDPhiCut = false; //51
-  gammaJtDPhiCut = 7.*TMath::Pi()/8.; //52
-  minLeptonPt = 15.; //53
-  minLeptonEta = -1.44; //54
-  maxLeptonEta = 1.44; //55
-  doLeptonFlavorCuts = false; //56
-  minElectronPt = 15.; //57
-  minElectronEta = -1.44; //58
-  maxElectronEta = 1.44; //59
-  minMuonPt = 10.; //60
-  minMuonEta = -2.5; //61
-  maxMuonEta = 2.5; //62
-  minZPt = 20.; //63
-  maxZPt = 10000.; //64
-  minZM = 50.; //65
-  maxZM = 130.; //66
-  doZJtDPhiCut = false; //67
-  zJtDPhiCut = 7.*TMath::Pi()/8.; //68
+  minGammaPt = 40.; //48
+  maxGammaPt = 10000.; //49
+  minGammaEta = -1.44; //50
+  maxGammaEta = 1.44; //51
+  gammaPtHatStagger = 0.; //52
+  doGammaJtDPhiCut = false; //53
+  gammaJtDPhiCut = 7.*TMath::Pi()/8.; //54
+  minLeptonPt = 15.; //55
+  minLeptonEta = -1.44; //56
+  maxLeptonEta = 1.44; //57
+  doLeptonFlavorCuts = false; //58
+  minElectronPt = 15.; //59
+  minElectronEta = -1.44; //60
+  maxElectronEta = 1.44; //61
+  minMuonPt = 10.; //62
+  minMuonEta = -2.5; //63
+  maxMuonEta = 2.5; //64
+  minZPt = 20.; //65
+  maxZPt = 10000.; //66
+  minZM = 50.; //67
+  maxZM = 130.; //68
+  doZJtDPhiCut = false; //69
+  zJtDPhiCut = 7.*TMath::Pi()/8.; //70
+  doGenGammaCutOverride = false; //71
+  genGammaCut = 15.; //72
 
   for(unsigned int iter = 0; iter < nValidConfigVals; iter++){
     nConfigInputs[iter] = 0;
@@ -2757,6 +2839,8 @@ bool jecConfigParser::GetSetFlavorlessJetsAsGluon(){return setFlavorlessJetsAsGl
 bool jecConfigParser::GetDoQGReweight(){return doQGReweight;}
 std::string jecConfigParser::GetQGReweightFileName(){return qgReweightFileName;}
 bool jecConfigParser::GetDoCorrections(){return doCorrections;}
+std::string jecConfigParser::GetCorrFileName(){return corrFileName;}
+std::string jecConfigParser::GetCorrForm(){return corrForm;}
 
 bool jecConfigParser::KeepEventGamma(const float gammaPt, const float gammaEta)
 {
@@ -3092,6 +3176,9 @@ float jecConfigParser::GetMinZM(){return minZM;}
 float jecConfigParser::GetMaxZM(){return maxZM;}
 bool jecConfigParser::GetDoZJtDPhiCut(){return doZJtDPhiCut;}
 float jecConfigParser::GetZJtDPhiCut(){return zJtDPhiCut;}
+
+bool jecConfigParser::GetDoGenGammaCutOverride(){return doGenGammaCutOverride;}
+float jecConfigParser::GetGenGammaCut(){return genGammaCut;}
 
 void jecConfigParser::WriteConfigParamsToRootFile(TFile* writeFile_p)
 {
