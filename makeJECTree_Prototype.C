@@ -152,6 +152,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
 
   outFile_p->cd();
 
+  Int_t RunOut_[nJetAlgo];
+  Int_t LumiOut_[nJetAlgo];
+  ULong64_t EventOut_[nJetAlgo];
+
   Double_t leptPt1Out_[nJetAlgo];
   Double_t leptEta1Out_[nJetAlgo];
   Double_t leptPhi1Out_[nJetAlgo];
@@ -209,6 +213,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
   Int_t refSubIDOut_[nJetAlgo];
   Int_t refPartFlavOut_[nJetAlgo];
 
+  Int_t RunOutBad_[nJetAlgo];
+  Int_t LumiOutBad_[nJetAlgo];
+  ULong64_t EventOutBad_[nJetAlgo];
+
   Double_t leptPt1OutBad_[nJetAlgo];
   Double_t leptEta1OutBad_[nJetAlgo];
   Double_t leptPhi1OutBad_[nJetAlgo];
@@ -263,7 +271,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
   Int_t refSubIDOutBad_[nJetAlgo];
   Int_t refPartFlavOutBad_[nJetAlgo];
 
-  
+  Int_t RunOutGen_[nJetAlgo];
+  Int_t LumiOutGen_[nJetAlgo];
+  ULong64_t EventOutGen_[nJetAlgo];
+
   Int_t hiBinOutGen_[nJetAlgo];
   Double_t hiBinWeightOutGen_[nJetAlgo];
   Double_t hiBinWeightNormOutGen_[nJetAlgo];
@@ -370,6 +381,17 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
     outTree_p[iter]->Branch(genPhoPtStr1.c_str(), &genPhoPtOut_[iter], genPhoPtStr2.c_str());
     outTree_p[iter]->Branch(genPhoPhiStr1.c_str(), &genPhoPhiOut_[iter], genPhoPhiStr2.c_str());
     outTree_p[iter]->Branch(genPhoEtaStr1.c_str(), &genPhoEtaOut_[iter], genPhoEtaStr2.c_str());
+
+    std::string runStr1 = "Run";
+    std::string runStr2 = "Run/I";
+    std::string lumiStr1 = "Lumi";
+    std::string lumiStr2 = "Lumi/I";
+    std::string eventStr1 = "Event";
+    std::string eventStr2 = "Event/l";
+
+    outTree_p[iter]->Branch(runStr1.c_str(), &RunOut_[iter], runStr2.c_str());
+    outTree_p[iter]->Branch(lumiStr1.c_str(), &LumiOut_[iter], lumiStr2.c_str());
+    outTree_p[iter]->Branch(eventStr1.c_str(), &EventOut_[iter], eventStr2.c_str());
 
     std::string hiBinStr1 = "hiBin";
     std::string hiBinStr2 = "hiBin/I";
@@ -507,6 +529,11 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
     outTreeBad_p[iter]->Branch(genPhoPhiStr1.c_str(), &genPhoPhiOutBad_[iter], genPhoPhiStr2.c_str());
     outTreeBad_p[iter]->Branch(genPhoEtaStr1.c_str(), &genPhoEtaOutBad_[iter], genPhoEtaStr2.c_str());
 
+    outTree_p[iter]->Branch(runStr1.c_str(), &RunOutBad_[iter], runStr2.c_str());
+    outTree_p[iter]->Branch(lumiStr1.c_str(), &LumiOutBad_[iter], lumiStr2.c_str());
+    outTree_p[iter]->Branch(eventStr1.c_str(), &EventOutBad_[iter], eventStr2.c_str());
+
+
     outTreeBad_p[iter]->Branch(hiBinStr1.c_str(), &hiBinOutBad_[iter], hiBinStr2.c_str());
     outTreeBad_p[iter]->Branch(hiBinWeightStr1.c_str(), &hiBinWeightOutBad_[iter], hiBinWeightStr2.c_str());
     outTreeBad_p[iter]->Branch(hiBinWeightNormStr1.c_str(), &hiBinWeightNormOutBad_[iter], hiBinWeightNormStr2.c_str());
@@ -591,7 +618,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
     std::string treeNameGen = "jecTree_Gen_" + jetAlgo.at(iter);
     outTreeGen_p[iter] = new TTree(treeNameGen.c_str(), treeNameGen.c_str());
 
-    
+    outTree_p[iter]->Branch(runStr1.c_str(), &RunOutGen_[iter], runStr2.c_str());
+    outTree_p[iter]->Branch(lumiStr1.c_str(), &LumiOutGen_[iter], lumiStr2.c_str());
+    outTree_p[iter]->Branch(eventStr1.c_str(), &EventOutGen_[iter], eventStr2.c_str());    
+
     outTreeGen_p[iter]->Branch(hiBinStr1.c_str(), &hiBinOutGen_[iter], hiBinStr2.c_str());
     outTreeGen_p[iter]->Branch(hiBinWeightStr1.c_str(), &hiBinWeightOutGen_[iter], hiBinWeightStr2.c_str());
     outTreeGen_p[iter]->Branch(hiBinWeightNormStr1.c_str(), &hiBinWeightNormOutGen_[iter], hiBinWeightNormStr2.c_str());
@@ -627,6 +657,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
   }
 
   Int_t nZMoreThanOne = 0;
+
+  Int_t Run_;
+  Int_t Lumi_;
+  ULong64_t Event_;
 
   Float_t vz_;
   Int_t hiBin_ = 0;
@@ -759,6 +793,7 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
       
 
       TFile* inFile_p = TFile::Open(fileList.at(fileIter).c_str(), "READ");
+      TTree* hltTree_p = (TTree*)inFile_p->Get("hltanalysis/HltTree");
       TTree* hiTree_p = (TTree*)inFile_p->Get("hiEvtAnalyzer/HiTree");
       TTree* skimTree_p = (TTree*)inFile_p->Get("skimanalysis/HltTree");
       TTree* genTree_p = (TTree*)inFile_p->Get("HiGenParticleAna/hi");
@@ -776,6 +811,15 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
 	jetTree_p[iter] = (TTree*)inFile_p->Get(Form("%sJetAnalyzer/t", jetAlgo.at(iter).c_str()));
       }
       
+      hltTree_p->SetBranchStatus("*", 0);
+      hltTree_p->SetBranchStatus("Run", 1);
+      hltTree_p->SetBranchStatus("LumiBlock", 1);
+      hltTree_p->SetBranchStatus("Event", 1);
+
+      hltTree_p->SetBranchAddress("Run", &Run_);
+      hltTree_p->SetBranchAddress("LumiBlock", &Lumi_);
+      hltTree_p->SetBranchAddress("Event", &Event_);
+
       hiTree_p->SetBranchStatus("*", 0);
       hiTree_p->SetBranchStatus("vz", 1);
       hiTree_p->SetBranchStatus("run", 1);
@@ -949,6 +993,7 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
 	
 	if(debugMode) std::cout << __LINE__ << std::endl;
 
+	hltTree_p->GetEntry(entry);
 	skimTree_p->GetEntry(entry);
 	hiTree_p->GetEntry(entry);
 	genTree_p->GetEntry(entry);
@@ -1297,6 +1342,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
 	inputEvents[pthatIter]++;
       
 	for(Int_t algoIter = 0; algoIter < nJetAlgo; algoIter++){
+	  RunOut_[algoIter] = Run_;
+	  LumiOut_[algoIter] = Lumi_;
+	  EventOut_[algoIter] = Event_;
+
 	  hiBinOut_[algoIter] = hiBin_;
 	  ptHatOut_[algoIter] = ptHat_[algoIter];
 	  ptHatWeightOut_[algoIter] = config.GetPtHatWeight(ptHat_[algoIter]);
@@ -1311,6 +1360,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
 	  }
 
 	  fullWeightOut_[algoIter] = ptHatWeightOut_[algoIter]*hiBinWeightOut_[algoIter];
+
+	  RunOutBad_[algoIter] = Run_;
+	  LumiOutBad_[algoIter] = Lumi_;
+	  EventOutBad_[algoIter] = Event_;
 
 	  hiBinOutBad_[algoIter] = hiBin_;
 	  ptHatOutBad_[algoIter] = ptHat_[algoIter];
@@ -1604,6 +1657,10 @@ int makeJECTree_Prototype(const std::string inConfigFileName)
             }
 
 	    
+
+	    RunOutGen_[algoIter] = Run_;
+	    LumiOutGen_[algoIter] = Lumi_;
+	    EventOutGen_[algoIter] = Event_;
 
 	    hiBinOutGen_[algoIter] = hiBin_;
 	    ptHatOutGen_[algoIter] = ptHat_[algoIter];
